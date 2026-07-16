@@ -1,24 +1,59 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
 out/
-*.log
-.env
-.env.local
-*.db
-*.db-shm
-*.db-wal
-coverage/
 .vite/
-.DS_Store
-Thumbs.db
 apps/client/release/
 apps/client/out/
 apps/server/release/
-apps/server/logs/
+apps/server/dist/
 apps/bot/release/
-apps/bot/logs/
-apps/bot/bot-config.json
 apps/bot/dist/
 packages/*/dist/
+
+# TypeScript
+*.tsbuildinfo
 packages/*/tsconfig.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+apps/server/logs/
+apps/bot/logs/
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Tests
+coverage/
+
+# Bot
+apps/bot/bot-config.json
+
+# Temp
+tmp/
+temp/
+*.tmp
+
+# Superpowers task tracking
 .superpowers/sdd/
