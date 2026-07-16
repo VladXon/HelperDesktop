@@ -104,6 +104,18 @@ export class BotManager {
         restarts: this.restartTimestamps.length,
         windowMs: WINDOW_MS,
       });
+      const oldest = this.restartTimestamps[0]!;
+      const cooldown = oldest + WINDOW_MS - now + 1000;
+      if (cooldown > 0) {
+        log.bot('scheduling bot retry after cooldown', { delayMs: cooldown });
+        this.restartTimer = setTimeout(() => {
+          this.restartTimer = null;
+          this.gaveUp = false;
+          this.restartTimestamps = [];
+          this.start();
+        }, cooldown);
+        this.restartTimer.unref();
+      }
       return;
     }
 
