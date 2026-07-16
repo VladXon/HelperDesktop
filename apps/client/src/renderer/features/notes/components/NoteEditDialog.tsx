@@ -15,6 +15,7 @@ import { Switch } from '../../../components/ui/switch';
 import { MarkdownEditor } from './MarkdownEditor';
 import { TagInput } from './TagInput';
 import { ReminderPicker } from './ReminderPicker';
+import { AiInspectorDevPanel } from '../../ai-inspector';
 import { useCreateNote } from '../hooks/useCreateNote';
 import { useUpdateNote } from '../hooks/useUpdateNote';
 import type { Note } from '../types';
@@ -120,6 +121,7 @@ export function NoteEditDialog({ open, onOpenChange, note, onSaved }: NoteEditDi
             </Button>
           </DialogFooter>
         </form>
+        <AiInspectorDevPanel />
       </DialogContent>
     </Dialog>
   );

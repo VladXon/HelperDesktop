@@ -13,6 +13,7 @@ import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
 import { AppRow } from './AppRow';
+import { AiInspectorDevPanel } from '../../ai-inspector';
 import { useCreatePreset } from '../hooks/useCreatePreset';
 import { useUpdatePreset } from '../hooks/useUpdatePreset';
 import type { Preset, PresetApp } from '../types';
@@ -122,6 +123,7 @@ export function PresetEditDialog({ open, onOpenChange, preset, onSaved }: Preset
             </Button>
           </DialogFooter>
         </form>
+        <AiInspectorDevPanel />
       </DialogContent>
     </Dialog>
   );

@@ -178,10 +178,17 @@ Client dev: `apps/client/scripts/dev.mjs` — starts Vite on :5173, then electro
 **Fix**: Added `safeReplacer()` with `WeakSet` to detect circular refs + `'[React Element]'` short-circuit for `$$typeof` objects. Wrapped `<AiInspectorOverlay>` in `<ErrorBoundary>`.
 **Files**: `prompt-formatter.ts`, `components/ui/error-boundary.tsx` (new), `App.tsx`.
 
-### Fix 3 (2026-07-16): Click interception + modal dialog
+### Fix 3 (2026-07-16): Click interception + floating panel
 **Bug**: Clicking an element with AI inspector on also triggered the element's normal action (e.g., opening Note modal).
-**Fix**: Added `e.preventDefault()` + `e.stopPropagation()` in capture-phase click handler. Added `selectedInfo` state + `clearSelected()` to context. On click, shows a Radix `Dialog` modal with the prompt. Blocks app interaction until closed.
+**Fix**: Added `e.preventDefault()` + `e.stopPropagation()` in capture-phase click handler. On click, copies prompt to clipboard and shows in floating bottom-right panel. Close button has `data-ai-inspector-ignore` to avoid interception.
 **Files**: `AiInspectorProvider.tsx`, `AiInspectorOverlay.tsx`.
+
+### Fix 4 (2026-07-16): Modal overlay visibility + dev panel inside dialogs
+**Bug**: AI Inspector overlay hidden behind Radix Dialog portal (both at z-50); no inspector info inside modal forms.
+**Fix**: 
+- Overlay z-index raised to `z-[60]` so tooltip and panel render above modal overlay
+- Added `AiInspectorDevPanel` — collapsible `<details>` section shown inside `NoteEditDialog` and `PresetEditDialog` when `import.meta.env.DEV`. Shows current hovered/pinned component info using the shared `useAiInspector` context. Renders `Bug` icon + "AI Inspector" header + `formatPrompt` output.
+**Files**: `AiInspectorOverlay.tsx` (z-index), `AiInspectorDevPanel.tsx` (new), `NoteEditDialog.tsx`, `PresetEditDialog.tsx`.
 
 ## Server Bot Skip (2026-07-16)
 Server now checks `process.env.BOT_TOKEN` before spawning the bot process. If not set, logs a warning and starts without bot. Prevents crash-loop restarts locally.
