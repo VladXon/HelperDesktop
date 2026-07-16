@@ -1,6 +1,16 @@
 import { InlineKeyboard } from 'grammy';
 
-export function mainMenu(): InlineKeyboard {
+export function dynamicMainMenu(isLinked: boolean): InlineKeyboard {
+  if (isLinked) {
+    return new InlineKeyboard()
+      .text('Профиль', 'cmd:me')
+      .text('Статус сервера', 'cmd:status')
+      .row()
+      .text('Мой ID', 'cmd:id')
+      .text('Помощь', 'cmd:help')
+      .row()
+      .text('Отвязать аккаунт', 'cmd:logout');
+  }
   return new InlineKeyboard()
     .text('Привязать аккаунт', 'cmd:link')
     .text('Войти через QR', 'cmd:qr')
@@ -9,9 +19,7 @@ export function mainMenu(): InlineKeyboard {
     .text('Статус сервера', 'cmd:status')
     .row()
     .text('Мой ID', 'cmd:id')
-    .text('Помощь', 'cmd:help')
-    .row()
-    .text('Отвязаться', 'cmd:logout');
+    .text('Помощь', 'cmd:help');
 }
 
 export function unlinkConfirm(): InlineKeyboard {
@@ -33,3 +41,5 @@ export function notificationActions(noteId: number, deepLinkScheme: string): Inl
     .row()
     .text('Отметить прочитанным', `note:read:${noteId}`);
 }
+
+export { dynamicMainMenu as mainMenu };

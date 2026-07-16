@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
-  mainMenu,
+  dynamicMainMenu,
   notificationActions,
   openNoteButton,
   unlinkConfirm,
 } from '../keyboards.js';
 
-describe('mainMenu keyboard', () => {
-  it('has expected rows and labels with cmd: callbacks', () => {
-    const kb = mainMenu();
+describe('dynamicMainMenu keyboard', () => {
+  it('shows link/qr buttons when not linked', () => {
+    const kb = dynamicMainMenu(false);
     const rows = kb.inline_keyboard;
-    expect(rows).toHaveLength(4);
+    expect(rows).toHaveLength(3);
     expect(rows[0]).toEqual([
       expect.objectContaining({ text: 'Привязать аккаунт', callback_data: 'cmd:link' }),
       expect.objectContaining({ text: 'Войти через QR', callback_data: 'cmd:qr' }),
@@ -23,8 +23,22 @@ describe('mainMenu keyboard', () => {
       expect.objectContaining({ text: 'Мой ID', callback_data: 'cmd:id' }),
       expect.objectContaining({ text: 'Помощь', callback_data: 'cmd:help' }),
     ]);
-    expect(rows[3]).toEqual([
-      expect.objectContaining({ text: 'Отвязаться', callback_data: 'cmd:logout' }),
+  });
+
+  it('shows logout button instead of link/qr when linked', () => {
+    const kb = dynamicMainMenu(true);
+    const rows = kb.inline_keyboard;
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toEqual([
+      expect.objectContaining({ text: 'Профиль', callback_data: 'cmd:me' }),
+      expect.objectContaining({ text: 'Статус сервера', callback_data: 'cmd:status' }),
+    ]);
+    expect(rows[1]).toEqual([
+      expect.objectContaining({ text: 'Мой ID', callback_data: 'cmd:id' }),
+      expect.objectContaining({ text: 'Помощь', callback_data: 'cmd:help' }),
+    ]);
+    expect(rows[2]).toEqual([
+      expect.objectContaining({ text: 'Отвязать аккаунт', callback_data: 'cmd:logout' }),
     ]);
   });
 });

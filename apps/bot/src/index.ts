@@ -2,10 +2,10 @@ import { Bot } from 'grammy';
 import { loadConfig } from './config.js';
 import { log, logger } from './logger.js';
 import { ServerClient } from './api/server-client.js';
-import { mainMenu } from './keyboards.js';
 import { registerStart } from './commands/start.js';
 import { registerLink, type BotContext } from './commands/link.js';
 import { registerMe } from './commands/me.js';
+import { buildMenu } from './helpers.js';
 import { createRemindersPoller } from './polling/reminders.js';
 import { createNotificationsPoller } from './polling/notifications.js';
 
@@ -51,14 +51,16 @@ export function createBot(): BotRuntime {
       '/logout — отвязать аккаунт',
       '/help — это сообщение',
     ].join('\n');
-    await ctx.reply(text, { reply_markup: mainMenu() });
+    const menu = await buildMenu(server, ctx.from?.id);
+    await ctx.reply(text, { reply_markup: menu });
   });
 
   bot.command('id', async (ctx) => {
     const id = ctx.from?.id;
+    const menu = await buildMenu(server, id);
     await ctx.reply(
       typeof id === 'number' ? `Ваш Telegram ID: ${id}` : 'Не удалось определить Telegram ID.',
-      { reply_markup: mainMenu() },
+      { reply_markup: menu },
     );
   });
 
