@@ -1,0 +1,7 @@
+export { Titlebar } from './components/Titlebar';
+export { Sidebar } from './components/Sidebar';
+export { ServerStatusBadge } from './components/ServerStatusBadge';
+export { UserMenu } from './components/UserMenu';
+export { CommandPalette } from './components/CommandPalette';
+export { useServerHealth } from './hooks/useServerHealth';
+export type { CommandDef } from './components/CommandPalette';

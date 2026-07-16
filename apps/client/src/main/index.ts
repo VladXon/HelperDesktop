@@ -1,0 +1,110 @@
+import { app, BrowserWindow, shell } from 'electron';
+import { join } from 'node:path';
+import { registerAuthIpc } from './ipc/auth.js';
+import { registerNotesIpc } from './ipc/notes.js';
+import { registerPresetsIpc } from './ipc/presets.js';
+import { registerSettingsIpc } from './ipc/settings.js';
+import { registerTelegramIpc } from './ipc/telegram.js';
+import { registerServerIpc } from './ipc/server.js';
+import { registerDialogIpc } from './ipc/dialog.js';
+import { registerWindowIpc, setMainWindow, setupDeepLink, handleDeepLink } from './ipc/window.js';
+
+if (requireElectronSquirrel()) app.quit();
+
+let mainWindow: BrowserWindow | null = null;
+
+function requireElectronSquirrel(): boolean {
+  try {
+    const mod = require('electron-squirrel-startup') as boolean | { createSquirrelShortcut: () => void };
+    if (typeof mod === 'boolean') return mod;
+    if (mod && typeof mod.createSquirrelShortcut === 'function') {
+      mod.createSquirrelShortcut();
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+function getMainWindow(): BrowserWindow | null {
+  if (mainWindow && !mainWindow.isDestroyed()) return mainWindow;
+  return null;
+}
+
+function registerAllIpc(): void {
+  registerAuthIpc();
+  registerNotesIpc();
+  registerPresetsIpc();
+  registerSettingsIpc();
+  registerTelegramIpc();
+  registerServerIpc(getMainWindow);
+  registerDialogIpc();
+  registerWindowIpc();
+}
+
+function createWindow(): void {
+  const win = new BrowserWindow({
+    width: 1100,
+    height: 720,
+    minWidth: 800,
+    minHeight: 500,
+    frame: false,
+    show: false,
+    backgroundColor: '#08080a',
+    webPreferences: {
+      preload: join(__dirname, '..', 'preload', 'index.js'),
+      contextIsolation: true,
+      sandbox: true,
+      nodeIntegration: false,
+    },
+  });
+
+  win.once('ready-to-show', () => {
+    win.show();
+  });
+
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      void shell.openExternal(url);
+    }
+    return { action: 'deny' };
+  });
+
+  const devUrl = process.env['VITE_DEV_SERVER_URL'];
+  if (devUrl) {
+    void win.loadURL(devUrl);
+  } else {
+    void win.loadFile(join(__dirname, '..', 'renderer', 'index.html'));
+  }
+
+  mainWindow = win;
+  setMainWindow(win);
+
+  win.on('closed', () => {
+    if (mainWindow === win) mainWindow = null;
+  });
+}
+
+app.on('ready', () => {
+  registerAllIpc();
+  setupDeepLink(getMainWindow);
+  createWindow();
+
+  const { app: electronApp } = require('electron') as typeof import('electron');
+  void electronApp;
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  }
+});
+
+void handleDeepLink;

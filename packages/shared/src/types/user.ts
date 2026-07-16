@@ -17,5 +17,7 @@ export interface TokenData {
 export interface AccountInfo {
   login: string;
   userId: number;
+  isDev: boolean;
+  createdAt: string;
   lastUsedAt: number;
 }

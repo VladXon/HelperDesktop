@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/renderer/*"]
+    },
+    "types": ["vite/client", "node"],
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "allowImportingTsExtensions": false
+  },
+  "include": [
+    "src/renderer/**/*.ts",
+    "src/renderer/**/*.tsx",
+    "src/main/**/*.ts",
+    "src/main/**/*.tsx",
+    "src/preload/**/*.ts"
+  ],
+  "exclude": ["node_modules", ".vite", "out"],
+  "references": [{ "path": "../../packages/shared" }]
+}
