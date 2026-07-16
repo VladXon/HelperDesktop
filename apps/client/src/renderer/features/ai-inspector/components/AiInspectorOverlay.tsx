@@ -50,14 +50,14 @@ export function AiInspectorOverlay(): React.JSX.Element | null {
     <>
       {pos && hovered ? (
         <div
-          className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-black/90 px-2 py-1 text-xs text-white shadow-lg"
+          className="pointer-events-none fixed z-[60] -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-black/90 px-2 py-1 text-xs text-white shadow-lg"
           style={{ left: pos.x, top: pos.y - 6 }}
         >
           {hoveredInfo?.name ?? '…'}
         </div>
       ) : null}
       <div
-        className="fixed bottom-3 right-3 z-50 max-w-md rounded-md border border-border bg-bg-secondary p-3 text-xs text-text-primary shadow-2xl"
+        className="fixed bottom-3 right-3 z-[60] max-w-md rounded-md border border-border bg-bg-secondary p-3 text-xs text-text-primary shadow-2xl"
       >
         <div className="mb-1 flex items-center justify-between">
           <span className="font-semibold text-accent">AI-инспектор</span>
