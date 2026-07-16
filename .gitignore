@@ -17,6 +17,8 @@ apps/server/release/
 apps/server/logs/
 apps/bot/release/
 apps/bot/logs/
+apps/bot/bot-config.json
+apps/bot/dist/
 packages/*/dist/
 packages/*/tsconfig.tsbuildinfo
 .superpowers/sdd/
