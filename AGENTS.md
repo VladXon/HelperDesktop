@@ -23,6 +23,80 @@ Electron (React 19) ←HTTPS/WS→ Express + Drizzle/SQLite ←internal HTTP→ 
 | **shared** | Zod schemas + TypeScript types |
 | **tools** | pnpm, Vitest, tsx, electron-forge |
 
+## Design System (Client)
+
+**Dark theme only, CSS custom properties on `:root` + Tailwind aliases.**
+
+### Colors
+| Token | Tailwind | Value | Usage |
+|---|---|---|---|
+| `--bg-primary` | `bg-bg-primary` | `#131315` | Main body, app shell |
+| `--bg-secondary` | `bg-bg-secondary` | `#1c1b1d` | Cards secondary, dropdowns, popovers |
+| `--bg-sidebar` | `bg-bg-sidebar` | `rgba(14,14,16,0.92)` | Sidebar |
+| `--text-primary` | `text-text-primary` | `#e5e1e4` | Primary text |
+| `--text-secondary` | `text-text-secondary` | `#cbc3d7` | Secondary text |
+| `--text-muted` | `text-text-muted` | `#958ea0` | Muted text, placeholders |
+| `--primary` | `text-primary` / `bg-primary` | `#d0bcff` | Light lavender accents |
+| `--primary-container` | `text-primary-container` / `bg-primary-container` | `#a078ff` | Medium purple |
+| `--accent` | `bg-accent` / `text-accent` / `border-accent` | `#8b5cf6` | Main accent (violet-500) |
+| `--accent-hover` | `bg-accent-hover` | `#7c3aed` | Accent hover (violet-600) |
+| `--border` | `border-border` / `border-white/10` | `rgba(255,255,255,0.08)` | Subtle borders |
+
+### Typography
+- **Font:** Inter, system-ui, sans-serif; Mono: Inter, monospace
+- **Sizes:** `text-headline-lg` (28px, 700, page titles), `text-headline-md` (20px, 600, section headers), `text-body-md` (14px, 400, body), `text-label-sm` (12px, 500, labels), `text-xs` (badges/tooltips), `text-sm` (cards/body), `text-base` (card titles), `text-lg` (dialog titles)
+- **Prose (markdown):** `prose prose-invert prose-sm max-w-none break-words text-text-secondary`
+
+### Glassmorphism
+- **Cards:** `bg-white/[0.03] backdrop-blur-xl rounded-lg border border-white/10`
+- **Dialogs:** `bg-white/[0.04] backdrop-blur-2xl rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)]`
+- **Sidebar/Titlebar:** `bg-surface-container-lowest/40 backdrop-blur-2xl`
+- **Search:** `bg-white/5 backdrop-blur-md`
+
+### Spacing
+- Page padding: `p-container_padding` (32px)
+- Grid gap: `gap-gutter` (16px)
+- Section stacking: `space-y-stack_gap` (24px)
+- Form fields: `flex flex-col gap-1.5` (label + input), `flex flex-col gap-3` (form)
+- Cards: `p-4`, sidebar items: `px-4 py-3`
+
+### Page Layout
+```
+div.flex.h-screen.w-screen.flex-col
+├── Titlebar (h-14, bg-sidebar glass)
+└── div.flex.flex-1
+    ├── Sidebar (w-sidebar_width, 240px, bg-sidebar glass)
+    └── main.flex-1
+        └── Page content (notes/presets/settings)
+```
+**NotesPage/PresetsPage:** top bar (h-16) with search + "Create" button → scrollable list → edit Dialog modal.
+**SettingsPage:** `mx-auto max-w-4xl space-y-stack_gap` with `glass-panel rounded-2xl` accordion sections.
+
+### Background Effect (atmospheric orbs)
+```tsx
+<div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+  <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-primary-container/10 blur-[120px]" />
+  <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-secondary-container/10 blur-[120px]" />
+</div>
+```
+
+### Component Patterns
+- **Button:** `cn()` with CVA — base: `inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium transition-all focus-visible:ring-accent active:scale-95 disabled:opacity-50`. Variants: `default`, `accent`, `outline`, `secondary`, `ghost`, `destructive`, `link`. Sizes: `default` (h-9 px-4), `sm` (h-8 px-3), `lg` (h-10 px-6), `icon` (h-9 w-9)
+- **Input:** `flex h-9 w-full rounded-lg border border-white/10 bg-black/20 px-4 py-3 text-sm text-text-primary shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)] focus-visible:border-accent focus-visible:shadow-[inset_0_1px_2px_rgba(0,0,0,0.3),0_0_8px_rgba(139,92,246,0.3)]`
+- **Badge:** CVA — variants: `default` (bg-accent/20 text-accent), `secondary` (bg-white/5 text-text-secondary), `outline` (border-white/10 text-text-secondary), `accent` (bg-accent text-white)
+- **Switch:** `h-5 w-9 rounded-full data-[state=checked]:bg-accent data-[state=unchecked]:bg-bg-primary`; thumb: `h-4 w-4 rounded-full bg-white shadow-lg transition-transform data-[state=checked]:translate-x-4`
+- **Dialog:** Radix Dialog — overlay `bg-black/60 backdrop-blur-sm`, content `rounded-2xl bg-white/[0.04] backdrop-blur-2xl p-6 max-w-lg`
+- **DropdownMenu:** `bg-bg-secondary border border-border p-1 rounded-md shadow-md`; items: `rounded-sm px-2 py-1.5 text-sm hover:bg-bg-primary`
+
+### Key Conventions for New Components/Pages
+- Use `cn()` from `lib/utils.ts` for class merging
+- Icons: `@phosphor-icons/react`, size `16` standard, `14` small, `20` large
+- Transitions: `transition-all` for buttons/inputs, `transition-colors` for badges/links
+- Form: always `flex flex-col gap-1.5` per field, label with `text-label-sm`, error with `text-xs text-red-400`
+- Disabled: `disabled:opacity-50 disabled:cursor-not-allowed`
+- Z-index: orbs `0`, content `10`, sidebar `40`, overlays `50`
+- Hover effect: most interactive elements get `hover:bg-white/5` or `hover:text-accent`
+
 ## Directory Structure
 
 ```
