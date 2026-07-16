@@ -10,17 +10,6 @@ export const loginSchema = z
 
 export const passwordSchema = z.string().min(1).max(256);
 
-export const registerSchema = z.object({
-  login: loginSchema,
-  password: passwordSchema,
-  name: z.string().min(0).max(128).optional(),
-});
-
-export const loginBodySchema = z.object({
-  login: loginSchema,
-  password: passwordSchema,
-});
-
 export const passwordPolicySchema = z
   .string()
   .min(8)
@@ -28,6 +17,17 @@ export const passwordPolicySchema = z
   .refine((v) => /[A-Z]/.test(v), 'must contain uppercase letter')
   .refine((v) => /[a-z]/.test(v), 'must contain lowercase letter')
   .refine((v) => /[0-9]/.test(v), 'must contain a digit');
+
+export const registerSchema = z.object({
+  login: loginSchema,
+  password: passwordPolicySchema,
+  name: z.string().min(0).max(128).optional(),
+});
+
+export const loginBodySchema = z.object({
+  login: loginSchema,
+  password: passwordSchema,
+});
 
 export const refreshSchema = z.object({
   refreshToken: z.string().min(1),

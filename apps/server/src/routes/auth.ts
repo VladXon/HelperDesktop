@@ -7,12 +7,12 @@ import {
   registerSchema,
   refreshSchema,
 } from '@helper/shared/schemas/auth';
-import { config } from '../config.js';
 import { getDb, schema, type User } from '../db/index.js';
 import { hashPassword, verifyPassword } from '../auth/password.js';
 import { createSession, revokeAllSessionsForUser, revokeSession, rotateSession } from '../auth/sessions.js';
 import { requireAuth } from '../middleware/auth.js';
 import { HttpError } from '../middleware/error-handler.js';
+import { authPerMinLimit } from '../middleware/rate-limit.js';
 import { audit } from '../services/audit.js';
 import { clearFailedAttempts, isLockedOut, recordLoginAttempt } from '../services/lockout.js';
 
@@ -42,7 +42,7 @@ function toPublicUser(u: typeof schema.users.$inferSelect) {
 export function createAuthRouter(): Router {
   const router = Router();
 
-  router.post('/register', async (req: Request, res: Response, next: NextFunction) => {
+  router.post('/register', authPerMinLimit, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const parsed = registerSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -81,7 +81,7 @@ export function createAuthRouter(): Router {
     }
   });
 
-  router.post('/login', async (req: Request, res: Response, next: NextFunction) => {
+  router.post('/login', authPerMinLimit, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const parsed = loginBodySchema.safeParse(req.body);
       if (!parsed.success) {
@@ -112,7 +112,7 @@ export function createAuthRouter(): Router {
     }
   });
 
-  router.post('/token', async (req: Request, res: Response, next: NextFunction) => {
+  router.post('/token', authPerMinLimit, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const parsed = loginBodySchema.safeParse(req.body);
       if (!parsed.success) {
@@ -253,5 +253,3 @@ export function createAuthRouter(): Router {
 
   return router;
 }
-
-void config;

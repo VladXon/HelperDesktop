@@ -5,8 +5,6 @@ import { getDb, schema, type Setting } from '../db/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { HttpError } from '../middleware/error-handler.js';
 
-const THEME_KEY_PREFIX = 'theme.';
-
 function parseValue(raw: string): unknown {
   try {
     return JSON.parse(raw);
@@ -129,5 +127,3 @@ export function createSettingsRouter(): Router {
 
   return router;
 }
-
-void THEME_KEY_PREFIX;

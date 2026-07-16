@@ -6,12 +6,17 @@ function ipKey(req: Request): string {
   return req.ip ?? 'unknown';
 }
 
+function skipInTest(): boolean {
+  return Boolean(process.env.VITEST) || config.nodeEnv === 'test';
+}
+
 export const globalRateLimit: RateLimitRequestHandler = rateLimit({
   windowMs: 60 * 1000,
   limit: config.isProd ? 100 : 1000,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   keyGenerator: ipKey,
+  skip: skipInTest,
   message: { error: 'rate_limited' },
 });
 
@@ -21,6 +26,7 @@ export const authPerMinLimit: RateLimitRequestHandler = rateLimit({
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   keyGenerator: ipKey,
+  skip: skipInTest,
   message: { error: 'rate_limited' },
 });
 
@@ -30,5 +36,6 @@ export const authRateLimit: RateLimitRequestHandler = rateLimit({
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   keyGenerator: ipKey,
+  skip: skipInTest,
   message: { error: 'rate_limited' },
 });

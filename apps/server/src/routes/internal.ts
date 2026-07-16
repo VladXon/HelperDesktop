@@ -1,5 +1,5 @@
 import { Router, type NextFunction, type Request, type Response } from 'express';
-import { and, eq, isNull, or } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import {
   botLinkByCodeSchema,
   botQrLoginApproveSchema,
@@ -194,6 +194,3 @@ export function createInternalRouter(): Router {
 
   return router;
 }
-
-void or;
-void isNull;

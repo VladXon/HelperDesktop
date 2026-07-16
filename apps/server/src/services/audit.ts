@@ -1,3 +1,4 @@
+import { desc } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { schema } from '../db/index.js';
 
@@ -49,7 +50,7 @@ export function listAudit(
   return db
     .select()
     .from(schema.auditLog)
-    .all()
-    .slice(-limit)
-    .reverse();
+    .orderBy(desc(schema.auditLog.id))
+    .limit(limit)
+    .all();
 }

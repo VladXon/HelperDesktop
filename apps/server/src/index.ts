@@ -15,6 +15,8 @@ import { createInternalRouter } from './routes/internal.js';
 import { createDevRouter } from './routes/dev.js';
 import { attachWebSocket } from './ws.js';
 import { BotManager } from './services/bot-manager.js';
+import { startCleanupJob } from './services/cleanup.js';
+import { getDb } from './db/index.js';
 import './db/index.js';
 
 export function createApp(): Express {
@@ -85,6 +87,8 @@ export function createApp(): Express {
 async function main(): Promise<void> {
   const app = createApp();
   const startedAt = Date.now();
+
+  startCleanupJob(getDb());
 
   const server = app.listen(config.port, () => {
     log.startup('server listening', {

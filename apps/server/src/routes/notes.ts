@@ -5,8 +5,6 @@ import { getDb, schema, type Note } from '../db/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { HttpError } from '../middleware/error-handler.js';
 
-const TAG_DEFAULT = '[]';
-
 function parseTags(raw: string): string[] {
   try {
     const parsed = JSON.parse(raw) as unknown;
@@ -162,5 +160,3 @@ export function createNotesRouter(): Router {
 
   return router;
 }
-
-void TAG_DEFAULT;

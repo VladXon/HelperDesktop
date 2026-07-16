@@ -117,12 +117,48 @@ Server now checks `process.env.BOT_TOKEN` before spawning the bot process. If no
 Renderer Vite output dir changed to `.vite/build/renderer/` so `main.js` can find it via `join(__dirname, 'renderer', 'index.html')`.
 **File**: `vite.renderer.config.ts`.
 
+## Build 0.2 — Code Quality & Bugfix Pass (2026-07-16)
+
+### Fixed: Telegram internal tests (7 failing → 0)
+**Root cause**: `.env` sets `NODE_ENV=production` + `BOT_SHARED_SECRET`, but tests sent requests without `x-bot-secret` header → `requireBotSecret` middleware returned 401.
+**Fix**: Added `beforeEach`/`afterEach` to manage `config.botSharedSecret` + `botAuth()` helper that sends the correct header.
+**Files**: `apps/server/src/__tests__/telegram-internal.test.ts`.
+
+### Fixed: Password policy inconsistency
+**Bug**: `registerSchema` used `passwordSchema` (min 1 char), but `changePasswordSchema` used `passwordPolicySchema` (min 8, uppercase, lowercase, digit).
+**Fix**: Registration now uses `passwordPolicySchema` — new users must set strong passwords.
+**Files**: `packages/shared/src/schemas/auth.ts`.
+
+### Fixed: JWT access token TTL (24h → 15m)
+**Bug**: `TOKEN_TTL_SECONDS = 24 * 60 * 60` (24h) did not match documented 15m.
+**Fix**: Changed to `15 * 60` (15 minutes).
+**Files**: `apps/server/src/auth/jwt.ts`.
+
+### Fixed: Cleanup job never started
+**Bug**: `startCleanupJob()` was exported but never called — session/action/attempt/audit cleanup never ran.
+**Fix**: Added `startCleanupJob(getDb())` call in `main()` — runs immediately then every hour.
+**Files**: `apps/server/src/index.ts`, `apps/server/src/services/cleanup.ts`.
+
+### Fixed: Auth rate limit non-functional
+**Bug**: `authPerMinLimit` (5 req/min) was defined but never applied to any route.
+**Fix**: Applied `authPerMinLimit` to `/register`, `/login`, `/token` routes (skipped in test env via `process.env.VITEST`).
+**Files**: `apps/server/src/routes/auth.ts`, `apps/server/src/middleware/rate-limit.ts`.
+
+### Fixed: SQL performance issues
+**Bug**: `listAudit()` loaded ALL rows into memory with `.all().slice(-limit).reverse()` — O(n) memory. `isLockedOut()` loaded ALL failed attempts and sorted in JS.
+**Fix**: Use SQL `ORDER BY ... DESC LIMIT` for both queries.
+**Files**: `apps/server/src/services/audit.ts`, `apps/server/src/services/lockout.ts`.
+
+### Cleaned: Unused imports with `void` suppression
+Removed `void config`, `void or`, `void isNull`, `void TAG_DEFAULT`, `void THEME_KEY_PREFIX`, `void eq` patterns across 5 files.
+**Files**: `routes/auth.ts`, `routes/notes.ts`, `routes/settings.ts`, `routes/internal.ts`, `services/bot-manager.ts`, `services/cleanup.ts`.
+
 ## Security Reference
 
-- **Passwords**: scrypt `N=16384, r=8, p=1, keylen=64`, salt `crypto.randomBytes(16)`, timingSafeEqual verify
+- **Passwords**: scrypt `N=16384, r=8, p=1, keylen=64`, salt `crypto.randomBytes(16)`, timingSafeEqual verify. Registration enforces 8+ chars with uppercase, lowercase, and digit.
 - **JWT**: HS256, access 15m, refresh 7d, rotation with reuse detection (revoke all sessions)
 - **Lockout**: 5 failed attempts per login+IP in 15m → blocked 30m
-- **Rate limit**: 100 req/min global (1000 dev), 5 req/min on auth endpoints per IP
+- **Rate limit**: 100 req/min global (1000 dev), 5 req/min on /register /login /token per IP, skipped in test env
 - **Bot auth**: `X-Bot-Secret` header, timingSafeEqual compare
 - **Client tokens**: Electron safeStorage (DPAPI on Windows, Keychain on macOS)
 - **HTTP**: helmet (CSP/HSTS) in production, disabled in dev
@@ -159,6 +195,7 @@ Renderer Vite output dir changed to `.vite/build/renderer/` so `main.js` can fin
 
 ## Noteworthy
 
+- Server version updated from `0.1.0` to `0.2.0` (hardcoded in `config.ts` — update from package.json next)
 - `_debugSource` removed in React 19 — fiber source info always null
 - `memoizedState` is a linked list of hook nodes, not raw state — extraction is approximate
 - `isDev` is a DB column on `users` table, defaults to false. Set via: `UPDATE users SET is_dev = 1 WHERE login = '...'`

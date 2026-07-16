@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { config } from '../config.js';
 
-const TOKEN_TTL_SECONDS = 24 * 60 * 60;
+const TOKEN_TTL_SECONDS = 15 * 60;
 
 export interface AccessTokenPayload {
   userId: number;

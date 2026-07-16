@@ -1,4 +1,4 @@
-import { and, eq, isNull, lt } from 'drizzle-orm';
+import { and, isNull, lt } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import * as schema from '../db/schema.js';
 import { log } from '../utils/logger.js';
@@ -74,5 +74,3 @@ export function stopCleanupJob(): void {
     timer = null;
   }
 }
-
-void eq;

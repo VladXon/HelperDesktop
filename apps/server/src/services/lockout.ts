@@ -1,4 +1,4 @@
-import { and, eq, gte, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, sql } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { schema } from '../db/index.js';
 
@@ -67,13 +67,12 @@ export function isLockedOut(
         eq(schema.loginAttempts.success, false),
       ),
     )
-    .all()
-    .map((r) => r.at)
-    .sort()
-    .pop();
+    .orderBy(desc(schema.loginAttempts.createdAt))
+    .limit(1)
+    .all()[0];
   if (!lastFailed) return false;
 
-  const lastFailedMs = parseSqliteUtc(lastFailed);
+  const lastFailedMs = parseSqliteUtc(lastFailed.at);
   const diff = Date.now() - lastFailedMs;
   return diff < LOCKOUT_DURATION_MS;
 }

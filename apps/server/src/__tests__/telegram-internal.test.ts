@@ -11,6 +11,7 @@ import { requestId } from '../middleware/request-id.js';
 import { createAuthRouter } from '../routes/auth.js';
 import { createTelegramRouter } from '../routes/telegram.js';
 import { createInternalRouter } from '../routes/internal.js';
+import { config } from '../config.js';
 
 let raw: Database.Database;
 let db: BetterSQLite3Database<typeof schema>;
@@ -129,6 +130,21 @@ describe('Telegram public', () => {
 });
 
 describe('Telegram internal (bot)', () => {
+  const originalBotSecret = config.botSharedSecret;
+  const TEST_BOT_SECRET = 'test-bot-secret-for-tests';
+
+  beforeEach(() => {
+    (config as { botSharedSecret: string }).botSharedSecret = TEST_BOT_SECRET;
+  });
+
+  afterEach(() => {
+    (config as { botSharedSecret: string }).botSharedSecret = originalBotSecret;
+  });
+
+  function botAuth(): { [key: string]: string } {
+    return { 'x-bot-secret': TEST_BOT_SECRET };
+  }
+
   it('links by code and returns login', async () => {
     await registerAndLogin();
     const code = (
@@ -138,6 +154,7 @@ describe('Telegram internal (bot)', () => {
     ).body.code;
     const res = await request(app)
       .post('/api/internal/bot/link-by-code')
+      .set(botAuth())
       .send({ code, telegramId: 12345 });
     expect(res.status).toBe(200);
     expect(res.body.user_id).toBe(userId);
@@ -157,6 +174,7 @@ describe('Telegram internal (bot)', () => {
       .run();
     const res = await request(app)
       .post('/api/internal/bot/link-by-code')
+      .set(botAuth())
       .send({ code, telegramId: 12345 });
     expect(res.status).toBe(410);
   });
@@ -170,8 +188,9 @@ describe('Telegram internal (bot)', () => {
     ).body.code;
     await request(app)
       .post('/api/internal/bot/link-by-code')
+      .set(botAuth())
       .send({ code, telegramId: 99999 });
-    const res = await request(app).get('/api/internal/bot/user-by-telegram-id?telegramId=99999');
+    const res = await request(app).get('/api/internal/bot/user-by-telegram-id?telegramId=99999').set(botAuth());
     expect(res.status).toBe(200);
     expect(res.body.user_id).toBe(userId);
   });
@@ -179,7 +198,7 @@ describe('Telegram internal (bot)', () => {
   it('returns 404 from user-by-telegram-id when not linked', async () => {
     const res = await request(app).get(
       '/api/internal/bot/user-by-telegram-id?telegramId=777',
-    );
+    ).set(botAuth());
     expect(res.status).toBe(404);
   });
 
@@ -192,12 +211,14 @@ describe('Telegram internal (bot)', () => {
     ).body.code;
     await request(app)
       .post('/api/internal/bot/link-by-code')
+      .set(botAuth())
       .send({ code, telegramId: 55555 });
     const { token: qrToken } = (
       await request(app).post('/api/telegram/qr/login/request')
     ).body;
     const res = await request(app)
       .post('/api/internal/bot/qr-login-approve')
+      .set(botAuth())
       .send({ token: qrToken, telegramId: 55555 });
     expect(res.status).toBe(200);
     expect(res.body.session.token).toBeTruthy();
@@ -213,9 +234,11 @@ describe('Telegram internal (bot)', () => {
     ).body.code;
     await request(app)
       .post('/api/internal/bot/link-by-code')
+      .set(botAuth())
       .send({ code, telegramId: 11111 });
     const res = await request(app)
       .post('/api/internal/bot/unlink-by-telegram-id')
+      .set(botAuth())
       .send({ telegramId: 11111 });
     expect(res.status).toBe(200);
     const status = await request(app)
@@ -230,6 +253,7 @@ describe('Telegram internal (bot)', () => {
     ).body;
     const res = await request(app)
       .post('/api/internal/bot/qr-login-approve')
+      .set(botAuth())
       .send({ token: qrToken, telegramId: 99999 });
     expect(res.status).toBe(404);
   });

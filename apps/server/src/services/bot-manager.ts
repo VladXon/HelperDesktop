@@ -1,7 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { config } from '../config.js';
 import { log } from '../utils/logger.js';
 
 const RESTART_BACKOFF_MS = [1000, 5000, 30_000, 60_000, 300_000];
@@ -159,4 +158,4 @@ export class BotManager {
   }
 }
 
-void config;
+
