@@ -5,17 +5,11 @@ node_modules/
 dist/
 out/
 .vite/
-apps/client/release/
-apps/client/out/
-apps/server/release/
-apps/server/dist/
-apps/bot/release/
-apps/bot/dist/
-packages/*/dist/
+release/
+coverage/
 
 # TypeScript
 *.tsbuildinfo
-packages/*/tsconfig.tsbuildinfo
 
 # Environment
 .env
@@ -44,17 +38,22 @@ apps/bot/logs/
 Thumbs.db
 Desktop.ini
 
-# Tests
-coverage/
-
-# Bot
-apps/bot/bot-config.json
-
 # Temp
 tmp/
 temp/
 *.tmp
 *.b64
 
+# Bot
+apps/bot/bot-config.json
+
 # Superpowers task tracking
 .superpowers/sdd/
+
+# Design artifacts (auto-generated HTML/PNG from AI)
+docs/design-specs/**/*.html
+docs/design-specs/**/*.png
+
+# Dev / test helpers
+apps/client/test-renderer-dev.mjs
+.github/workflows/README.md
