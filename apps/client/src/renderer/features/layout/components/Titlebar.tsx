@@ -1,12 +1,15 @@
 import * as React from 'react';
 import { Minus, Square, CornersOut, X } from '@phosphor-icons/react';
 import { Button } from '../../../components/ui/button';
+import { useAuth } from '../../../providers/AuthProvider';
 import { useRouter } from '../../../providers/RouterProvider';
+import { AiInspectorToggle } from '../../ai-inspector';
 import { ServerStatusBadge } from './ServerStatusBadge';
 import { UserMenu } from './UserMenu';
 
 export function Titlebar(): React.JSX.Element {
   const { navigate, openCommandPalette } = useRouter();
+  const { user } = useAuth();
   const [maximized, setMaximized] = React.useState<boolean>(false);
 
   React.useEffect(() => {
@@ -37,6 +40,7 @@ export function Titlebar(): React.JSX.Element {
         </button>
       </div>
       <div className="app-no-drag flex items-center gap-3">
+        {user?.isDev ? <AiInspectorToggle /> : null}
         <ServerStatusBadge onClick={() => navigate({ page: 'settings' })} />
         <UserMenu />
         <div className="flex items-center">

@@ -11,6 +11,7 @@ import { Titlebar, Sidebar, CommandPalette } from './features/layout';
 import { NotesPage } from './features/notes';
 import { PresetsPage } from './features/presets';
 import { SettingsPage } from './features/settings';
+import { AiInspectorOverlay } from './features/ai-inspector';
 import { onNoteLink } from './lib/deep-link';
 
 function MainApp(): React.JSX.Element {
@@ -52,6 +53,7 @@ function MainApp(): React.JSX.Element {
         </main>
       </div>
       <CommandPalette />
+      <AiInspectorOverlay />
       <div className="sr-only">{user?.login}</div>
     </div>
   );
