@@ -1,0 +1,92 @@
+name: Deploy
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to deploy (branch, tag, or SHA). Leave empty to use default branch."
+        required: false
+        default: ""
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: "20"
+  REMOTE_DIR: "/opt/helperdesktop"
+
+jobs:
+  deploy:
+    name: Deploy to production
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install pnpm
+        run: npm i -g pnpm@9
+
+      - name: Validate secrets
+        run: |
+          if [ -z "${{ secrets.SSH_HOST }}" ]; then
+            echo "::error::SSH_HOST secret is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.SSH_USER }}" ]; then
+            echo "::error::SSH_USER secret is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.SSH_KEY }}" ]; then
+            echo "::error::SSH_KEY secret is not set"
+            exit 1
+          fi
+          echo "Secrets present."
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          command_timeout: 10m
+          script: |
+            set -euo pipefail
+            cd ${{ env.REMOTE_DIR }}
+            echo "==> Pulling latest code"
+            git pull --ff-only
+            echo "==> Installing dependencies"
+            pnpm install --frozen-lockfile
+            echo "==> Running database migrations"
+            pnpm --filter @helper/server db:migrate
+            echo "==> Building server"
+            pnpm --filter @helper/server build
+            echo "==> Building bot"
+            pnpm --filter @helper/bot build
+            echo "==> Reloading PM2 processes"
+            pm2 reload ecosystem.config.js || pm2 start ecosystem.config.js
+            pm2 save
+            echo "==> Recent logs"
+            pm2 logs helperdesktop-server --lines 30 --nostream --raw
