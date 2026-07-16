@@ -1,7 +1,18 @@
-import { randomBytes, scrypt as scryptCb, timingSafeEqual } from 'node:crypto';
-import { promisify } from 'node:util';
+import { randomBytes, scrypt, timingSafeEqual, type ScryptOptions } from 'node:crypto';
 
-const scrypt = promisify(scryptCb);
+function scryptAsync(
+  password: string | Buffer,
+  salt: Buffer,
+  keylen: number,
+  options: ScryptOptions,
+): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    scrypt(password, salt, keylen, options, (err, derived) => {
+      if (err) reject(err);
+      else resolve(derived);
+    });
+  });
+}
 
 export const SCRYPT_PARAMS = {
   N: 16384,
@@ -61,12 +72,12 @@ export function parseHash(stored: string): {
 
 export async function hashPassword(plain: string): Promise<string> {
   const salt = randomBytes(SALT_BYTES);
-  const hash = (await scrypt(plain.normalize('NFKC'), salt, SCRYPT_PARAMS.keylen, {
+  const hash = await scryptAsync(plain.normalize('NFKC'), salt, SCRYPT_PARAMS.keylen, {
     N: SCRYPT_PARAMS.N,
     r: SCRYPT_PARAMS.r,
     p: SCRYPT_PARAMS.p,
     maxmem: 64 * 1024 * 1024,
-  })) as Buffer;
+  });
   return formatHash(salt, hash);
 }
 
@@ -76,12 +87,12 @@ export async function verifyPassword(plain: string, stored: string): Promise<boo
   if (parsed.N !== SCRYPT_PARAMS.N || parsed.r !== SCRYPT_PARAMS.r || parsed.p !== SCRYPT_PARAMS.p) {
     return false;
   }
-  const candidate = (await scrypt(plain.normalize('NFKC'), parsed.salt, parsed.hash.length, {
+  const candidate = await scryptAsync(plain.normalize('NFKC'), parsed.salt, parsed.hash.length, {
     N: parsed.N,
     r: parsed.r,
     p: parsed.p,
     maxmem: 64 * 1024 * 1024,
-  })) as Buffer;
+  });
   if (candidate.length !== parsed.hash.length) return false;
   return timingSafeEqual(candidate, parsed.hash);
 }

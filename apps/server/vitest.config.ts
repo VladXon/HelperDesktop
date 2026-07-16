@@ -6,5 +6,9 @@ export default defineConfig({
     environment: 'node',
     pool: 'forks',
     fileParallelism: false,
+    env: {
+      LOG_LEVEL: 'error',
+      NODE_ENV: 'test',
+    },
   },
 });
