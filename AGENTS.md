@@ -283,6 +283,15 @@ Removed `void config`, `void or`, `void isNull`, `void TAG_DEFAULT`, `void THEME
 - Server DB: `apps/server/helperdesktop.db`
 - Ports: Vite :5173, Electron main process :5173 (shared), Express :3001
 
+## SSH Operations
+
+**All SSH-related work MUST be delegated to a subagent** via `task` with `subagent_type: "general"`. This includes:
+- Deploying code, running `git pull`, building on VPS
+- Checking server status, logs, processes
+- Running any command via `ssh root@178.172.137.167`
+
+Do NOT run SSH commands directly — the output is verbose, Windows cmd quoting is error-prone, and it burns context. Subagent receives: host, command, and expected result.
+
 ## VPS Server
 
 - Host: 178.172.137.167
