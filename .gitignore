@@ -18,4 +18,5 @@ apps/server/logs/
 apps/bot/release/
 apps/bot/logs/
 packages/*/dist/
+packages/*/tsconfig.tsbuildinfo
 .superpowers/sdd/
