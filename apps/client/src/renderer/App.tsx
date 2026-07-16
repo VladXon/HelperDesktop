@@ -11,6 +11,7 @@ import { Titlebar, Sidebar, CommandPalette } from './features/layout';
 import { NotesPage } from './features/notes';
 import { PresetsPage } from './features/presets';
 import { SettingsPage } from './features/settings';
+import { onNoteLink } from './lib/deep-link';
 
 function MainApp(): React.JSX.Element {
   const { current, navigate, openCommandPalette, closeCommandPalette, isCommandPaletteOpen } = useRouter();
@@ -26,13 +27,16 @@ function MainApp(): React.JSX.Element {
     const onNewNote = (): void => navigate({ page: 'notes', newNote: true });
     const onNewPreset = (): void => navigate({ page: 'presets', newPreset: true });
     const onOpenSettings = (): void => navigate({ page: 'settings' });
+    const onDeepNote = (id: number): void => navigate({ page: 'notes', editNoteId: id });
     window.addEventListener('notes:new', onNewNote);
     window.addEventListener('presets:new', onNewPreset);
     window.addEventListener('settings:open', onOpenSettings);
+    const offDeepLink = onNoteLink(onDeepNote);
     return () => {
       window.removeEventListener('notes:new', onNewNote);
       window.removeEventListener('presets:new', onNewPreset);
       window.removeEventListener('settings:open', onOpenSettings);
+      offDeepLink();
     };
   }, [navigate]);
 
