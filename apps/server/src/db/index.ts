@@ -38,3 +38,4 @@ export function getRaw(): DatabaseType {
 }
 
 export { schema };
+export type { User, Session, Note, Preset, Setting, AuditLog, LoginAttempt, TelegramLink, TelegramAction } from './schema.js';

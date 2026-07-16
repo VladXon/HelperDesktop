@@ -3,6 +3,9 @@ import express, { type Express } from 'express';
 import helmet from 'helmet';
 import { config } from './config.js';
 import { log, logger } from './utils/logger.js';
+import { errorHandler } from './middleware/error-handler.js';
+import { requestId } from './middleware/request-id.js';
+import { globalRateLimit } from './middleware/rate-limit.js';
 
 export function createApp(): Express {
   const app = express();
@@ -40,6 +43,8 @@ export function createApp(): Express {
   );
 
   app.use(express.json({ limit: '1mb' }));
+  app.use(requestId);
+  app.use(globalRateLimit);
 
   app.get('/api/health', (_req, res) => {
     res.json({
@@ -51,22 +56,10 @@ export function createApp(): Express {
   });
 
   app.use((req, res) => {
-    res.status(404).json({ error: 'not_found', requestId: undefined });
+    res.status(404).json({ error: 'not_found', requestId: req.requestId });
   });
 
-  app.use(
-    (err: Error & { status?: number; statusCode?: number; type?: string }, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-      const status = err.status ?? err.statusCode ?? 500;
-      if (status >= 500) {
-        logger.error('http', 'unhandled error', { error: err.message, stack: err.stack });
-      } else {
-        logger.debug('http', 'request error', { status, error: err.message });
-      }
-      res.status(status >= 500 ? 500 : status).json({
-        error: status >= 500 ? 'internal_error' : (err.type ?? 'bad_request'),
-      });
-    },
-  );
+  app.use(errorHandler);
 
   return app;
 }

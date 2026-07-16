@@ -7,7 +7,7 @@ export default defineConfig({
     pool: 'forks',
     fileParallelism: false,
     env: {
-      LOG_LEVEL: 'error',
+      LOG_LEVEL: 'fatal',
       NODE_ENV: 'test',
     },
   },
