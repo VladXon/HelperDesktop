@@ -16,14 +16,14 @@ export function QrLoginPanel(): React.JSX.Element {
 
   if (!opened) {
     return (
-      <Button variant="outline" className="w-full" onClick={() => { setOpened(true); void request(); }}>
+      <Button variant="outline" className="w-full gap-3 py-3" onClick={() => { setOpened(true); void request(); }}>
         Войти через Telegram
       </Button>
     );
   }
 
   return (
-    <div className="flex flex-col items-center gap-3 rounded-md border border-border bg-bg-secondary p-4">
+    <div className="flex flex-col items-center gap-3 rounded-lg border border-white/10 bg-black/20 backdrop-blur-sm p-4">
       {status === 'pending' && qrDataUrl ? (
         <>
           <div className="rounded-md bg-white p-2">

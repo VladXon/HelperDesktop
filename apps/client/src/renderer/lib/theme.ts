@@ -3,16 +3,16 @@ import { THEME_TOKEN_KEYS, type ThemeTokens } from '@helper/shared';
 export type { ThemeTokens };
 
 export const DEFAULT_THEME: ThemeTokens = {
-  'theme.bg-primary': '#08080a',
-  'theme.bg-secondary': '#14141a',
-  'theme.bg-sidebar': 'rgba(8, 8, 10, 0.92)',
-  'theme.text-primary': '#ffffff',
+  'theme.bg-primary': '#131315',
+  'theme.bg-secondary': '#1c1b1d',
+  'theme.bg-sidebar': 'rgba(14, 14, 16, 0.92)',
+  'theme.text-primary': '#e5e1e4',
   'theme.text-secondary': '#cbc3d7',
   'theme.text-muted': '#958ea0',
   'theme.primary': '#d0bcff',
   'theme.primary-container': '#a078ff',
-  'theme.accent': '#d0bcff',
-  'theme.accent-hover': '#b49aff',
+  'theme.accent': '#8b5cf6',
+  'theme.accent-hover': '#7c3aed',
   'theme.border': 'rgba(255, 255, 255, 0.08)',
 };
 

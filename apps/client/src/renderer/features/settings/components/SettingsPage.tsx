@@ -10,38 +10,52 @@ export function SettingsPage(): React.JSX.Element {
   const { user } = useAuth();
 
   return (
-    <div className="h-full overflow-y-auto p-6">
-      <h1 className="mb-4 text-xl font-semibold">Настройки</h1>
-      <Accordion type="multiple" defaultValue={['account', 'telegram']} className="max-w-2xl">
-        <AccordionItem value="account">
-          <AccordionTrigger>Аккаунт</AccordionTrigger>
-          <AccordionContent>
-            <AccountSection />
-          </AccordionContent>
-        </AccordionItem>
-        <AccordionItem value="telegram">
-          <AccordionTrigger>Telegram</AccordionTrigger>
-          <AccordionContent>
-            <TelegramSection />
-          </AccordionContent>
-        </AccordionItem>
-        {user?.isDev ? (
-          <>
-            <AccordionItem value="theme">
-              <AccordionTrigger>Оформление</AccordionTrigger>
-              <AccordionContent>
-                <ThemeSection />
+    <div className="h-full overflow-y-auto p-container_padding">
+      <div className="mx-auto space-y-stack_gap max-w-4xl">
+        <h1 className="text-headline-lg font-bold text-text-primary mb-8 tracking-tight">Настройки</h1>
+
+        <section className="glass-panel rounded-2xl overflow-hidden relative">
+          <div className="inner-edge-highlight" />
+          <Accordion type="multiple" defaultValue={['account', 'telegram']}>
+            <AccordionItem value="account">
+              <AccordionTrigger className="px-8 sm:px-10 py-5 hover:bg-white/5 transition-colors text-headline-md font-bold text-text-primary">
+                Аккаунт
+              </AccordionTrigger>
+              <AccordionContent className="px-8 sm:px-10 pb-8">
+                <AccountSection />
               </AccordionContent>
             </AccordionItem>
-            <AccordionItem value="server">
-              <AccordionTrigger>Сервер</AccordionTrigger>
-              <AccordionContent>
-                <ServerSection />
+            <AccordionItem value="telegram">
+              <AccordionTrigger className="px-8 sm:px-10 py-5 hover:bg-white/5 transition-colors text-headline-md font-bold text-text-primary">
+                Telegram
+              </AccordionTrigger>
+              <AccordionContent className="px-8 sm:px-10 pb-8">
+                <TelegramSection />
               </AccordionContent>
             </AccordionItem>
-          </>
-        ) : null}
-      </Accordion>
+            {user?.isDev ? (
+              <>
+                <AccordionItem value="theme">
+                  <AccordionTrigger className="px-8 sm:px-10 py-5 hover:bg-white/5 transition-colors text-headline-md font-bold text-text-primary">
+                    Оформление
+                  </AccordionTrigger>
+                  <AccordionContent className="px-8 sm:px-10 pb-8">
+                    <ThemeSection />
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="server">
+                  <AccordionTrigger className="px-8 sm:px-10 py-5 hover:bg-white/5 transition-colors text-headline-md font-bold text-text-primary">
+                    Сервер
+                  </AccordionTrigger>
+                  <AccordionContent className="px-8 sm:px-10 pb-8">
+                    <ServerSection />
+                  </AccordionContent>
+                </AccordionItem>
+              </>
+            ) : null}
+          </Accordion>
+        </section>
+      </div>
     </div>
   );
 }

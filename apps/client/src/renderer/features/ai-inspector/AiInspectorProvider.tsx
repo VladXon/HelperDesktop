@@ -2,7 +2,6 @@ import * as React from 'react';
 import { type ComponentInfo, formatPrompt } from './prompt-formatter';
 
 const FIBER_KEY_RE = /^__reactFiber\$/;
-const STORAGE_KEY = 'ai-inspector:enabled';
 
 type FiberLike = {
   type?: unknown;
@@ -15,9 +14,9 @@ export interface UseAiInspectorReturn {
   enabled: boolean;
   hovered: HTMLElement | null;
   hoveredInfo: ComponentInfo | null;
-  selectedInfo: ComponentInfo | null;
+  pinnedInfo: ComponentInfo | null;
   setEnabled: (v: boolean) => void;
-  clearSelected: () => void;
+  clearPinned: () => void;
 }
 
 interface InspectorContextValue extends UseAiInspectorReturn {}
@@ -85,43 +84,24 @@ function extractInfo(el: HTMLElement): ComponentInfo | null {
   };
 }
 
-function readStored(): boolean {
-  if (typeof window === 'undefined') return false;
-  try {
-    return localStorage.getItem(STORAGE_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
-
-function writeStored(v: boolean): void {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(STORAGE_KEY, v ? '1' : '0');
-  } catch {
-    /* ignore */
-  }
-}
-
 export function AiInspectorProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
-  const [enabled, setEnabledState] = React.useState<boolean>(readStored);
+  const [enabled, setEnabledState] = React.useState<boolean>(false);
   const [hovered, setHovered] = React.useState<HTMLElement | null>(null);
   const [hoveredInfo, setHoveredInfo] = React.useState<ComponentInfo | null>(null);
-  const [selectedInfo, setSelectedInfo] = React.useState<ComponentInfo | null>(null);
+  const [pinnedInfo, setPinnedInfo] = React.useState<ComponentInfo | null>(null);
 
   const setEnabled = (v: boolean): void => {
-    writeStored(v);
     setEnabledState(v);
-    if (!v) setSelectedInfo(null);
+    if (!v) setPinnedInfo(null);
   };
 
-  const clearSelected = (): void => setSelectedInfo(null);
+  const clearPinned = (): void => setPinnedInfo(null);
 
   React.useEffect(() => {
     if (!enabled) {
       setHovered(null);
       setHoveredInfo(null);
-      setSelectedInfo(null);
+      setPinnedInfo(null);
       return;
     }
 
@@ -144,6 +124,7 @@ export function AiInspectorProvider({ children }: { children: React.ReactNode })
     const onClick = (e: MouseEvent): void => {
       const el = e.target as HTMLElement | null;
       if (!el) return;
+      if (el.closest('[data-ai-inspector-ignore]')) return;
       const info = extractInfo(el);
       if (!info) return;
       e.preventDefault();
@@ -154,7 +135,7 @@ export function AiInspectorProvider({ children }: { children: React.ReactNode })
       } catch {
         /* ignore */
       }
-      setSelectedInfo(info);
+      setPinnedInfo(info);
     };
     document.addEventListener('mouseover', onOver, true);
     document.addEventListener('mouseout', onOut, true);
@@ -167,8 +148,8 @@ export function AiInspectorProvider({ children }: { children: React.ReactNode })
   }, [enabled]);
 
   const value = React.useMemo<InspectorContextValue>(
-    () => ({ enabled, hovered, hoveredInfo, selectedInfo, setEnabled, clearSelected }),
-    [enabled, hovered, hoveredInfo, selectedInfo, setEnabled, clearSelected],
+    () => ({ enabled, hovered, hoveredInfo, pinnedInfo, setEnabled, clearPinned }),
+    [enabled, hovered, hoveredInfo, pinnedInfo, setEnabled, clearPinned],
   );
 
   return <InspectorContext.Provider value={value}>{children}</InspectorContext.Provider>;

@@ -9,6 +9,7 @@ export function AiInspectorToggle(): React.JSX.Element | null {
       type="button"
       onClick={() => setEnabled(!enabled)}
       title={enabled ? 'Выключить AI-инспектор' : 'Включить AI-инспектор'}
+      data-ai-inspector-ignore
       data-active={enabled}
       className={
         'app-no-drag flex h-7 items-center gap-1.5 rounded-md border px-2 text-xs transition-colors ' +

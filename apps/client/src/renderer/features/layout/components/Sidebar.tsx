@@ -19,8 +19,8 @@ export function Sidebar(): React.JSX.Element {
   const { current, navigate } = useRouter();
 
   return (
-    <aside className="flex w-60 flex-col border-r border-border bg-bg-sidebar">
-      <nav className="flex flex-col gap-1 p-3">
+    <aside className="flex w-sidebar_width flex-col border-r border-white/10 bg-surface-container-lowest/40 backdrop-blur-2xl z-40">
+      <nav className="flex flex-col gap-1 px-3 py-4 mt-4">
         {items.map((it) => {
           const active = current.page === it.id;
           return (
@@ -28,18 +28,26 @@ export function Sidebar(): React.JSX.Element {
               key={it.id}
               type="button"
               onClick={() => navigate({ page: it.id } as never)}
-              className={`relative flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
-                active ? 'bg-bg-secondary text-text-primary' : 'text-text-secondary hover:bg-bg-secondary/50'
+              className={`relative flex items-center gap-3 py-3 px-4 transition-all group ${
+                active
+                  ? 'bg-white/5 text-text-primary border-l-2 border-accent rounded-r-lg'
+                  : 'text-text-muted hover:text-text-primary hover:bg-white/5 rounded-lg'
               }`}
             >
-              {active ? <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r bg-gradient-to-b from-accent to-primary-container" /> : null}
-              <it.Icon size={18} />
-              {it.label}
+              {active ? (
+                <>
+                  <div className="light-pipe" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-accent/10 to-transparent opacity-50" />
+                </>
+              ) : null}
+              <it.Icon size={18} className={`relative z-10 ${active ? 'text-accent' : 'group-hover:text-accent/70 transition-colors'}`} />
+              <span className="font-label-sm text-sm font-medium relative z-10">{it.label}</span>
             </button>
           );
         })}
       </nav>
-      <div className="mt-auto p-3 border-t border-border">
+      <div className="mt-auto px-4 pb-4">
+        <div className="h-px bg-white/5 mb-4" />
         <ServerStatusBadge onClick={() => navigate({ page: 'settings' })} />
       </div>
     </aside>

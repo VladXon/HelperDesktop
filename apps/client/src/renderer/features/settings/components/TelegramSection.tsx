@@ -65,8 +65,8 @@ export function TelegramSection(): React.JSX.Element {
 
   if (status.data?.linked) {
     return (
-      <div className="flex flex-col gap-3">
-        <div className="rounded-md border border-border bg-bg-secondary p-3 text-sm">
+      <div className="space-y-4">
+        <div className="rounded-lg border border-white/10 bg-black/20 backdrop-blur-sm p-4">
           <div className="flex items-center gap-2 text-green-400">
             <CheckCircle size={16} weight="fill" />
             Telegram привязан
@@ -83,18 +83,18 @@ export function TelegramSection(): React.JSX.Element {
 
   if (code) {
     return (
-      <div className="flex flex-col gap-3">
-        <div className="rounded-md border border-border bg-bg-secondary p-3">
+      <div className="space-y-4">
+        <div className="rounded-lg border border-white/10 bg-black/20 backdrop-blur-sm p-4">
           <Label>Код для привязки</Label>
-          <div className="mt-2 flex items-center gap-2">
-            <div className="flex-1 rounded-md border border-border bg-bg-primary px-3 py-2 text-center font-mono text-lg tracking-widest">
+          <div className="mt-3 flex items-center gap-2">
+            <div className="flex-1 rounded-lg border border-white/10 bg-black/30 px-4 py-3 text-center font-mono text-lg tracking-widest">
               {code}
             </div>
             <Button variant="outline" size="icon" onClick={onCopy} title="Скопировать">
               {copied ? <CheckCircle size={16} weight="fill" className="text-green-400" /> : <Copy size={16} />}
             </Button>
           </div>
-          <div className="mt-2 text-xs text-text-muted">
+          <div className="mt-3 text-xs text-text-muted">
             Откройте Telegram-бот, отправьте команду /link и введите этот код.
           </div>
           {checking ? <div className="mt-1 text-xs text-text-muted">Ожидание...</div> : null}
@@ -106,9 +106,9 @@ export function TelegramSection(): React.JSX.Element {
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="text-sm text-text-muted">Telegram не привязан</div>
-      <Button onClick={onLink}>Привязать</Button>
+    <div className="space-y-4">
+      <p className="text-body-md text-text-muted">Telegram не привязан</p>
+      <Button onClick={onLink} className="w-full py-3.5">Привязать</Button>
       {error ? <div className="text-xs text-red-400">{error}</div> : null}
     </div>
   );

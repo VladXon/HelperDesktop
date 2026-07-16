@@ -19,6 +19,21 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['Inter', 'monospace'],
+      },
+      fontSize: {
+        'headline-lg': ['28px', { lineHeight: '36px', letterSpacing: '-0.02em', fontWeight: '700' }],
+        'headline-md': ['20px', { lineHeight: '28px', letterSpacing: '-0.01em', fontWeight: '600' }],
+        'body-md': ['14px', { lineHeight: '20px', letterSpacing: '0em', fontWeight: '400' }],
+        'label-sm': ['12px', { lineHeight: '16px', letterSpacing: '0.02em', fontWeight: '500' }],
+        'mono-label': ['11px', { lineHeight: '12px', letterSpacing: '0.05em', fontWeight: '600' }],
+      },
+      spacing: {
+        'sidebar_width': '240px',
+        'container_padding': '32px',
+        'gutter': '16px',
+        'stack_gap': '24px',
+        'item_gap': '8px',
       },
     },
   },

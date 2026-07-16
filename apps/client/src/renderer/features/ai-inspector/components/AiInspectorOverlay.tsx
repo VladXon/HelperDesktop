@@ -1,16 +1,11 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
+import { X } from '@phosphor-icons/react';
 import { useAiInspector } from '../hooks/useAiInspector';
 import { formatPrompt } from '../prompt-formatter';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '../../../components/ui/dialog';
 
 export function AiInspectorOverlay(): React.JSX.Element | null {
-  const { enabled, hovered, hoveredInfo, selectedInfo, clearSelected } = useAiInspector();
+  const { enabled, hovered, hoveredInfo, pinnedInfo, clearPinned } = useAiInspector();
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
@@ -47,11 +42,13 @@ export function AiInspectorOverlay(): React.JSX.Element | null {
     };
   }, [enabled, hovered]);
 
-  if (!enabled || !hovered) return null;
+  if (!enabled || (!hovered && !pinnedInfo)) return null;
+
+  const displayInfo = pinnedInfo ?? hoveredInfo;
 
   return (
     <>
-      {pos ? (
+      {pos && hovered ? (
         <div
           className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-black/90 px-2 py-1 text-xs text-white shadow-lg"
           style={{ left: pos.x, top: pos.y - 6 }}
@@ -60,34 +57,32 @@ export function AiInspectorOverlay(): React.JSX.Element | null {
         </div>
       ) : null}
       <div
-        aria-hidden
-        className="pointer-events-none fixed bottom-3 right-3 z-50 max-w-md rounded-md border border-border bg-bg-secondary p-3 text-xs text-text-primary shadow-2xl"
+        className="fixed bottom-3 right-3 z-50 max-w-md rounded-md border border-border bg-bg-secondary p-3 text-xs text-text-primary shadow-2xl"
       >
-        <div className="mb-1 font-semibold text-accent">AI-инспектор активен</div>
-        <div className="text-text-muted">Кликните по элементу — промт скопируется в буфер.</div>
-        <pre className="mt-2 max-h-48 overflow-auto rounded bg-bg-primary p-2 font-mono text-[10px] leading-tight text-text-secondary">
-          {hoveredInfo ? formatPrompt(hoveredInfo) : ''}
-        </pre>
-      </div>
-
-      <Dialog open={selectedInfo !== null} onOpenChange={(open) => { if (!open) clearSelected(); }}>
-        <DialogContent className="max-h-[80vh] max-w-2xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedInfo?.name ?? 'Component'}
-              {selectedInfo?.file ? (
-                <span className="ml-2 text-xs font-normal text-text-muted">
-                  {selectedInfo.file}
-                  {selectedInfo.line ? `:${selectedInfo.line}` : ''}
-                </span>
-              ) : null}
-            </DialogTitle>
-          </DialogHeader>
-          <pre className="overflow-auto rounded border border-border bg-bg-primary p-3 font-mono text-xs leading-relaxed text-text-secondary">
-            {selectedInfo ? formatPrompt(selectedInfo) : ''}
+        <div className="mb-1 flex items-center justify-between">
+          <span className="font-semibold text-accent">AI-инспектор</span>
+          {pinnedInfo ? (
+            <button
+              type="button"
+              onClick={clearPinned}
+              data-ai-inspector-ignore
+              className="flex h-5 w-5 items-center justify-center rounded text-text-muted hover:bg-bg-primary hover:text-text-primary"
+            >
+              <X size={12} />
+            </button>
+          ) : null}
+        </div>
+        <div className="text-text-muted">
+          {pinnedInfo
+            ? 'Промт скопирован в буфер.'
+            : 'Кликните по элементу — промт скопируется в буфер.'}
+        </div>
+        {displayInfo ? (
+          <pre className="mt-2 max-h-48 overflow-auto rounded bg-bg-primary p-2 font-mono text-[10px] leading-tight text-text-secondary">
+            {formatPrompt(displayInfo)}
           </pre>
-        </DialogContent>
-      </Dialog>
+        ) : null}
+      </div>
     </>
   );
 }

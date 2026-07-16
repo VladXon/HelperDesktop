@@ -11,6 +11,8 @@ import { registerWindowIpc, setMainWindow, setupDeepLink, handleDeepLink } from 
 
 if (requireElectronSquirrel()) app.quit();
 
+declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
+
 let mainWindow: BrowserWindow | null = null;
 
 function requireElectronSquirrel(): boolean {
@@ -51,7 +53,7 @@ function createWindow(): void {
     minHeight: 500,
     frame: false,
     show: false,
-    backgroundColor: '#08080a',
+    backgroundColor: '#131315',
     webPreferences: {
       preload: join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -71,8 +73,7 @@ function createWindow(): void {
     return { action: 'deny' };
   });
 
-  declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
-  const devUrl = MAIN_WINDOW_VITE_DEV_SERVER_URL;
+  const devUrl = typeof MAIN_WINDOW_VITE_DEV_SERVER_URL !== 'undefined' ? MAIN_WINDOW_VITE_DEV_SERVER_URL : void 0;
   if (devUrl) {
     void win.loadURL(devUrl);
   } else {

@@ -34,8 +34,8 @@ export function PasswordForm(): React.JSX.Element {
   };
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1.5">
+    <form onSubmit={onSubmit} className="space-y-6">
+      <div className="space-y-2">
         <Label htmlFor="login">Логин</Label>
         <Input
           id="login"
@@ -46,7 +46,7 @@ export function PasswordForm(): React.JSX.Element {
           required
         />
       </div>
-      <div className="flex flex-col gap-1.5">
+      <div className="space-y-2">
         <Label htmlFor="password">Пароль</Label>
         <Input
           id="password"
@@ -56,15 +56,18 @@ export function PasswordForm(): React.JSX.Element {
           placeholder="••••••••"
           autoComplete="current-password"
           required
+          className="tracking-[0.2em]"
         />
       </div>
       {error ? <div className="text-xs text-red-400">{error}</div> : null}
-      <Button type="submit" disabled={mutation.isPending} className="w-full">
-        {mutation.isPending ? 'Вход...' : 'Войти'}
-      </Button>
-      <div className="text-xs text-text-muted">
-        Если аккаунт не существует, он будет создан автоматически.
+      <div className="pt-2">
+        <Button type="submit" disabled={mutation.isPending} className="w-full py-3.5">
+          {mutation.isPending ? 'Вход...' : 'Войти'}
+        </Button>
       </div>
+      <p className="text-body-md text-[13px] leading-tight text-text-muted/70 text-center">
+        Если аккаунт не существует, он будет создан автоматически.
+      </p>
     </form>
   );
 }

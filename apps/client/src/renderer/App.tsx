@@ -42,9 +42,14 @@ function MainApp(): React.JSX.Element {
     };
   }, [navigate]);
 
-  return (
-    <AiInspectorProvider>
-      <div className="flex h-screen w-screen flex-col bg-bg-primary text-text-primary">
+  const content = (
+    <div className="flex h-screen w-screen flex-col bg-bg-primary text-text-primary relative overflow-hidden">
+      {/* Atmospheric Orbs */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-primary-container/10 blur-[120px]" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-secondary-container/10 blur-[120px]" />
+      </div>
+      <div className="relative z-10 flex flex-col h-full w-full">
         <Titlebar />
         <div className="flex flex-1 overflow-hidden">
           <Sidebar />
@@ -54,12 +59,14 @@ function MainApp(): React.JSX.Element {
             {current.page === 'settings' ? <SettingsPage /> : null}
           </main>
         </div>
-        <CommandPalette />
-        <ErrorBoundary><AiInspectorOverlay /></ErrorBoundary>
-        <div className="sr-only">{user?.login}</div>
       </div>
-    </AiInspectorProvider>
+      <CommandPalette />
+      {import.meta.env.DEV ? <ErrorBoundary><AiInspectorOverlay /></ErrorBoundary> : null}
+      <div className="sr-only">{user?.login}</div>
+    </div>
   );
+
+  return import.meta.env.DEV ? <AiInspectorProvider>{content}</AiInspectorProvider> : content;
 }
 
 function RoutedShell(): React.JSX.Element {

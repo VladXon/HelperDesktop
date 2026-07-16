@@ -13,24 +13,24 @@ export function AccountSection(): React.JSX.Element {
   const [emailOpen, setEmailOpen] = useState<boolean>(false);
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col gap-1.5">
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 gap-gutter">
+        <div className="space-y-2">
           <Label>Логин</Label>
-          <Input value={user?.login ?? ''} disabled />
+          <Input value={user?.login ?? ''} disabled className="bg-surface-container-low/50" />
         </div>
-        <div className="flex flex-col gap-1.5">
+        <div className="space-y-2">
           <Label>Email</Label>
-          <Input value={user?.email ?? ''} disabled />
+          <Input value={user?.email ?? ''} disabled className="bg-surface-container-low/50" />
         </div>
       </div>
-      <div className="flex flex-col gap-1.5">
+      <div className="space-y-2">
         <Label>Отображаемое имя</Label>
-        <Input value={user?.name ?? ''} disabled />
+        <Input value={user?.name ?? ''} disabled className="bg-surface-container-low/50" />
       </div>
-      <div className="flex gap-2">
-        <Button variant="outline" onClick={() => setPwOpen(true)}>Сменить пароль</Button>
-        <Button variant="outline" onClick={() => setEmailOpen(true)}>Сменить email</Button>
+      <div className="flex gap-4 pt-2">
+        <Button variant="outline" className="px-5 py-3" onClick={() => setPwOpen(true)}>Сменить пароль</Button>
+        <Button variant="outline" className="px-5 py-3" onClick={() => setEmailOpen(true)}>Сменить email</Button>
       </div>
       <PasswordChangeDialog open={pwOpen} onOpenChange={setPwOpen} />
       <EmailChangeDialog open={emailOpen} onOpenChange={setEmailOpen} />
