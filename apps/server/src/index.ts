@@ -7,6 +7,7 @@ import { errorHandler } from './middleware/error-handler.js';
 import { requestId } from './middleware/request-id.js';
 import { globalRateLimit } from './middleware/rate-limit.js';
 import { createAuthRouter } from './routes/auth.js';
+import { attachWebSocket } from './ws.js';
 import './db/index.js';
 
 export function createApp(): Express {
@@ -79,6 +80,8 @@ async function main(): Promise<void> {
       version: config.version,
     });
   });
+
+  attachWebSocket(server);
 
   let shuttingDown = false;
   const shutdown = (signal: string): void => {
