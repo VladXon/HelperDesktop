@@ -16,6 +16,15 @@ async function loadUser(userId: number): Promise<AuthedUser | null> {
   return { ...row, isDev: Boolean(row.isDev) } as AuthedUser;
 }
 
+function sessionExists(token: string): boolean {
+  const row = getDb()
+    .select({ id: schema.sessions.id })
+    .from(schema.sessions)
+    .where(eq(schema.sessions.token, token))
+    .all()[0];
+  return Boolean(row);
+}
+
 export async function requireAuth(
   req: Request,
   _res: Response,
@@ -28,6 +37,10 @@ export async function requireAuth(
       const payload = verifyToken(token);
       if (!payload) {
         log.security('auth_failed', { reason: 'bad_token', ip: req.ip });
+        throw new HttpError(401, 'unauthorized', 'Invalid credentials');
+      }
+      if (!sessionExists(token)) {
+        log.security('auth_failed', { reason: 'session_revoked', userId: payload.userId, ip: req.ip });
         throw new HttpError(401, 'unauthorized', 'Invalid credentials');
       }
       const user = await loadUser(payload.userId);

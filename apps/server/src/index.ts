@@ -6,6 +6,8 @@ import { log, logger } from './utils/logger.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { requestId } from './middleware/request-id.js';
 import { globalRateLimit } from './middleware/rate-limit.js';
+import { createAuthRouter } from './routes/auth.js';
+import './db/index.js';
 
 export function createApp(): Express {
   const app = express();
@@ -54,6 +56,8 @@ export function createApp(): Express {
       db: 'ok',
     });
   });
+
+  app.use('/api/auth', createAuthRouter());
 
   app.use((req, res) => {
     res.status(404).json({ error: 'not_found', requestId: req.requestId });

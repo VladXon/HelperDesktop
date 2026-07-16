@@ -37,5 +37,22 @@ export function getRaw(): DatabaseType {
   return _raw;
 }
 
+export function setDb(db: BetterSQLite3Database<typeof schema>, raw: DatabaseType): void {
+  _db = db;
+  _raw = raw;
+}
+
+export function resetDb(): void {
+  if (_raw) {
+    try {
+      _raw.close();
+    } catch {
+      // ignore
+    }
+  }
+  _db = null;
+  _raw = null;
+}
+
 export { schema };
 export type { User, Session, Note, Preset, Setting, AuditLog, LoginAttempt, TelegramLink, TelegramAction } from './schema.js';
