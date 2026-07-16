@@ -1,4 +1,23 @@
+import { existsSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { config as loadDotenv } from 'dotenv';
 import { z } from 'zod';
+
+const here = dirname(fileURLToPath(import.meta.url));
+const candidates = [
+  join(here, '.env'),
+  join(here, '..', '..', '.env'),
+  join(here, '..', '..', '..', '.env'),
+  join(process.cwd(), '.env'),
+  join(process.cwd(), 'apps', 'server', '.env'),
+];
+for (const p of candidates) {
+  if (existsSync(p)) {
+    loadDotenv({ path: p });
+    break;
+  }
+}
 
 export const SCRYPT_PARAMS = {
   N: 16384,
