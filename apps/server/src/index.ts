@@ -14,6 +14,7 @@ import { createTelegramRouter } from './routes/telegram.js';
 import { createInternalRouter } from './routes/internal.js';
 import { createDevRouter } from './routes/dev.js';
 import { attachWebSocket } from './ws.js';
+import { BotManager } from './services/bot-manager.js';
 import './db/index.js';
 
 export function createApp(): Express {
@@ -95,6 +96,13 @@ async function main(): Promise<void> {
 
   attachWebSocket(server);
 
+  const bot = new BotManager({
+    botPath: config.botPath,
+    serverUrl: `http://localhost:${config.port}`,
+    isWindows: process.platform === 'win32',
+  });
+  bot.start();
+
   let shuttingDown = false;
   const shutdown = (signal: string): void => {
     if (shuttingDown) return;
@@ -105,13 +113,15 @@ async function main(): Promise<void> {
       process.exit(1);
     }, 10_000);
     timer.unref();
-    server.close((err) => {
-      if (err) {
-        log.shutdown('server close error', { error: err.message });
-        process.exit(1);
-      }
-      log.shutdown('clean exit');
-      process.exit(0);
+    void bot.stop().finally(() => {
+      server.close((err) => {
+        if (err) {
+          log.shutdown('server close error', { error: err.message });
+          process.exit(1);
+        }
+        log.shutdown('clean exit');
+        process.exit(0);
+      });
     });
   };
 
