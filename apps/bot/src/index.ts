@@ -40,6 +40,29 @@ export function createBot(): BotRuntime {
     log.error('bot error', { error: message });
   });
 
+  const lastBotMessage = new Map<number, number>();
+
+  bot.use(async (ctx, next) => {
+    const chatId = ctx.chat?.id;
+    if (chatId && ctx.message && 'text' in ctx.message && typeof ctx.message.text === 'string' && ctx.message.text.startsWith('/')) {
+      const prevId = lastBotMessage.get(chatId);
+      if (prevId) {
+        try { await ctx.api.deleteMessage(chatId, prevId); } catch {}
+      }
+    }
+    await next();
+  });
+
+  bot.api.config.use(((prev: any) => {
+    return async (method: any, payload: any, signal?: any) => {
+      const result = await prev(method, payload, signal);
+      if (method === 'sendMessage' && result?.message_id && payload?.chat_id) {
+        lastBotMessage.set(Number(payload.chat_id), Number(result.message_id));
+      }
+      return result;
+    };
+  }) as any);
+
   bot.command('help', async (ctx) => {
     const text = [
       'Доступные команды:',

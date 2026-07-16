@@ -139,7 +139,8 @@ export function createTelegramRouter(): Router {
         .run();
       const botUsername = config.botUsername || 'bot';
       const deepLink = `https://t.me/${botUsername}?start=login_${token}`;
-      res.json({ token, deepLink, expiresIn: QR_EXPIRES_SECONDS });
+      const tgDeepLink = `tg://resolve?domain=${botUsername}&start=login_${token}`;
+      res.json({ token, deepLink, tgDeepLink, expiresIn: QR_EXPIRES_SECONDS });
     } catch (e) {
       next(e);
     }

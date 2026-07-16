@@ -1,10 +1,8 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Copy, CheckCircle } from '@phosphor-icons/react';
+import { Copy, CheckCircle, TelegramLogo } from '@phosphor-icons/react';
 import { Button } from '../../../components/ui/button';
-import { Input } from '../../../components/ui/input';
-import { Label } from '../../../components/ui/label';
 import { telegramLinkCheck, telegramLinkCode, telegramStatus, telegramUnlink } from '../api';
 
 export function TelegramSection(): React.JSX.Element {
@@ -84,22 +82,52 @@ export function TelegramSection(): React.JSX.Element {
   if (code) {
     return (
       <div className="space-y-4">
-        <div className="rounded-lg border border-white/10 bg-black/20 backdrop-blur-sm p-4">
-          <Label>Код для привязки</Label>
-          <div className="mt-3 flex items-center gap-2">
-            <div className="flex-1 rounded-lg border border-white/10 bg-black/30 px-4 py-3 text-center font-mono text-lg tracking-widest">
-              {code}
+        <div className="overflow-hidden rounded-xl border border-accent/30 bg-gradient-to-br from-accent/10 via-transparent to-accent/5 p-5 backdrop-blur-xl">
+          <div className="flex items-center gap-2 text-accent">
+            <TelegramLogo size={18} weight="fill" />
+            <span className="text-label-sm font-semibold">Привязка Telegram</span>
+          </div>
+
+          <div className="mt-4 flex items-center justify-center">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-lg bg-accent/20 blur-sm" />
+              <div className="relative flex items-center gap-3 rounded-lg border border-accent/20 bg-black/40 px-6 py-4">
+                <span className="font-mono text-3xl font-bold tracking-[0.25em] text-accent">
+                  {code}
+                </span>
+                <button
+                  onClick={onCopy}
+                  className="flex h-9 w-9 items-center justify-center rounded-md border border-white/10 bg-white/5 transition-colors hover:bg-white/10"
+                  title="Скопировать"
+                >
+                  {copied ? (
+                    <CheckCircle size={16} weight="fill" className="text-green-400" />
+                  ) : (
+                    <Copy size={16} className="text-text-secondary" />
+                  )}
+                </button>
+              </div>
             </div>
-            <Button variant="outline" size="icon" onClick={onCopy} title="Скопировать">
-              {copied ? <CheckCircle size={16} weight="fill" className="text-green-400" /> : <Copy size={16} />}
-            </Button>
           </div>
-          <div className="mt-3 text-xs text-text-muted">
-            Откройте Telegram-бот, отправьте команду /link и введите этот код.
+
+          <div className="mt-4 flex items-center gap-2 text-xs text-text-muted">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent/20 text-[10px] text-accent">1</span>
+            Отправьте код в Telegram-бот
+            <span className="inline-flex items-center rounded border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-[10px]">/link</span>
           </div>
-          {checking ? <div className="mt-1 text-xs text-text-muted">Ожидание...</div> : null}
+
+          {checking ? (
+            <div className="mt-2 flex items-center gap-2 text-xs text-text-muted">
+              <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-accent" />
+              Ожидание подтверждения...
+            </div>
+          ) : null}
         </div>
-        <Button variant="outline" onClick={() => setCode(null)}>Отмена</Button>
+
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setCode(null)} className="flex-1">Отмена</Button>
+        </div>
+
         {error ? <div className="text-xs text-red-400">{error}</div> : null}
       </div>
     );

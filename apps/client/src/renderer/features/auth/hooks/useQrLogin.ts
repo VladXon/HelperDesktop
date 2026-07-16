@@ -11,6 +11,7 @@ export function useQrLogin(): {
   isLoading: boolean;
   qrDataUrl: string | null;
   deepLink: string | null;
+  tgDeepLink: string | null;
   error: string | null;
   expiresIn: number | null;
   status: QrResultStatus;
@@ -18,6 +19,7 @@ export function useQrLogin(): {
 } {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [deepLink, setDeepLink] = useState<string | null>(null);
+  const [tgDeepLink, setTgDeepLink] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expiresIn, setExpiresIn] = useState<number | null>(null);
@@ -34,6 +36,7 @@ export function useQrLogin(): {
       const res = await window.api.telegram.qrLoginRequest();
       setToken(res.token);
       setDeepLink(res.deepLink);
+      setTgDeepLink(res.tgDeepLink);
       setExpiresIn(res.expiresIn);
       const url = await QRCode.toDataURL(res.deepLink, { width: 220, margin: 1 });
       setQrDataUrl(url);
@@ -85,6 +88,7 @@ export function useQrLogin(): {
     isLoading: false,
     qrDataUrl,
     deepLink,
+    tgDeepLink,
     error,
     expiresIn,
     status,

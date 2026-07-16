@@ -17,6 +17,7 @@ export type LinkStatus =
 export interface QrLoginRequestResponse {
   token: string;
   deepLink: string;
+  tgDeepLink: string;
   expiresIn: number;
 }
 

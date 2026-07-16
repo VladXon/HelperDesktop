@@ -86,6 +86,7 @@ export class ServerClient {
     this.circuit = new CircuitBreaker({
       ...DEFAULT_CIRCUIT,
       ...opts.circuit,
+      shouldCount: (err) => !(err instanceof ServerError && err.status < 500),
     });
   }
 

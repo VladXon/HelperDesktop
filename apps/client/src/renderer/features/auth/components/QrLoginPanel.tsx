@@ -1,10 +1,11 @@
 import * as React from 'react';
 import { Button } from '../../../components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../components/ui/dialog';
 import { useQrLogin } from '../hooks/useQrLogin';
 import { useAuth } from '../../../providers/AuthProvider';
 
 export function QrLoginPanel(): React.JSX.Element {
-  const { qrDataUrl, deepLink, error, status, approvedSession, request, cancel } = useQrLogin();
+  const { qrDataUrl, deepLink, tgDeepLink, error, status, approvedSession, request, cancel } = useQrLogin();
   const { setSession } = useAuth();
   const [opened, setOpened] = React.useState<boolean>(false);
 
@@ -14,47 +15,85 @@ export function QrLoginPanel(): React.JSX.Element {
     }
   }, [status, approvedSession, setSession]);
 
+  const handleOpen = (): void => {
+    setOpened(true);
+    void request();
+  };
+
+  const handleClose = (): void => {
+    cancel();
+    setOpened(false);
+  };
+
   if (!opened) {
     return (
-      <Button variant="outline" className="w-full gap-3 py-3" onClick={() => { setOpened(true); void request(); }}>
+      <Button variant="outline" className="w-full gap-3 py-3" onClick={handleOpen}>
         Войти через Telegram
       </Button>
     );
   }
 
   return (
-    <div className="flex flex-col items-center gap-3 rounded-lg border border-white/10 bg-black/20 backdrop-blur-sm p-4">
-      {status === 'pending' && qrDataUrl ? (
-        <>
-          <div className="rounded-md bg-white p-2">
-            <img src={qrDataUrl} alt="QR-код" width={220} height={220} />
+    <Dialog open={opened} onOpenChange={(open) => { if (!open) handleClose(); }}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Вход через Telegram</DialogTitle>
+        </DialogHeader>
+
+        {status === 'pending' && qrDataUrl ? (
+          <div className="flex flex-col items-center gap-4">
+            <div className="rounded-lg bg-white p-2">
+              <img src={qrDataUrl} alt="QR-код" width={200} height={200} />
+            </div>
+            <p className="text-sm text-text-muted text-center">
+              Отсканируйте QR-код в Telegram
+            </p>
+            {tgDeepLink ? (
+              <a
+                href={tgDeepLink}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full"
+              >
+                <Button variant="accent" className="w-full gap-2">
+                  Открыть в Telegram
+                </Button>
+              </a>
+            ) : deepLink ? (
+              <a
+                href={deepLink}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full"
+              >
+                <Button variant="accent" className="w-full gap-2">
+                  Открыть в Telegram
+                </Button>
+              </a>
+            ) : null}
           </div>
-          <div className="text-xs text-text-muted text-center">
-            Откройте Telegram, отсканируйте код или перейдите по ссылке
+        ) : null}
+
+        {status === 'expired' ? (
+          <div className="flex flex-col items-center gap-3">
+            <p className="text-sm text-red-400">Код истёк</p>
+            <Button variant="outline" size="sm" onClick={() => void request()}>Запросить новый</Button>
           </div>
-          {deepLink ? (
-            <a href={deepLink} className="text-xs text-accent hover:underline break-all" target="_blank" rel="noreferrer">
-              {deepLink}
-            </a>
-          ) : null}
-          <div className="flex gap-2 w-full">
-            <Button variant="outline" size="sm" className="flex-1" onClick={cancel}>Отмена</Button>
+        ) : null}
+
+        {status === 'not_found' ? (
+          <div className="flex flex-col items-center gap-3">
+            <p className="text-sm text-red-400">Запрос не найден</p>
+            <Button variant="outline" size="sm" onClick={() => void request()}>Запросить новый</Button>
           </div>
-        </>
-      ) : null}
-      {status === 'expired' ? (
-        <div className="text-sm text-red-400">Код истёк. Запросите новый.</div>
-      ) : null}
-      {status === 'not_found' ? (
-        <div className="text-sm text-red-400">Запрос не найден.</div>
-      ) : null}
-      {status === 'cancelled' ? (
-        <div className="text-sm text-text-muted">Отменено</div>
-      ) : null}
-      {status === 'expired' || status === 'not_found' || status === 'cancelled' ? (
-        <Button variant="outline" size="sm" onClick={() => { void request(); }}>Запросить новый</Button>
-      ) : null}
-      {error ? <div className="text-xs text-red-400">{error}</div> : null}
-    </div>
+        ) : null}
+
+        {status === 'cancelled' ? (
+          <p className="text-sm text-text-muted text-center">Отменено</p>
+        ) : null}
+
+        {error ? <p className="text-xs text-red-400 text-center">{error}</p> : null}
+      </DialogContent>
+    </Dialog>
   );
 }

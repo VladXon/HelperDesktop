@@ -5,6 +5,7 @@ export interface CircuitBreakerOptions {
   resetTimeoutMs: number;
   onStateChange?: (state: CircuitState) => void;
   now?: () => number;
+  shouldCount?: (err: unknown) => boolean;
 }
 
 export class CircuitOpenError extends Error {
@@ -19,6 +20,7 @@ export class CircuitBreaker {
   private readonly resetTimeoutMs: number;
   private readonly onStateChange?: (state: CircuitState) => void;
   private readonly now: () => number;
+  private readonly shouldCount: (err: unknown) => boolean;
 
   private stateValue: CircuitState = 'closed';
   private consecutiveFailures = 0;
@@ -29,6 +31,7 @@ export class CircuitBreaker {
     this.resetTimeoutMs = opts.resetTimeoutMs;
     this.onStateChange = opts.onStateChange;
     this.now = opts.now ?? Date.now;
+    this.shouldCount = opts.shouldCount ?? (() => true);
   }
 
   state(): CircuitState {
@@ -48,7 +51,9 @@ export class CircuitBreaker {
       this.onSuccess();
       return result;
     } catch (err) {
-      this.onFailure();
+      if (this.shouldCount(err)) {
+        this.onFailure();
+      }
       throw err;
     }
   }

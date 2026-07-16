@@ -20,6 +20,7 @@ export const telegramLinkCheckResponseSchema = z.discriminatedUnion('status', [
 export const telegramQrLoginRequestResponseSchema = z.object({
   token: z.string().min(1),
   deepLink: z.string().url(),
+  tgDeepLink: z.string().min(1),
   expiresIn: z.number().int().positive(),
 });
 
