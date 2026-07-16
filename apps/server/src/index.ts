@@ -96,12 +96,17 @@ async function main(): Promise<void> {
 
   attachWebSocket(server);
 
-  const bot = new BotManager({
-    botPath: config.botPath,
-    serverUrl: `http://localhost:${config.port}`,
-    isWindows: process.platform === 'win32',
-  });
-  bot.start();
+  let bot: BotManager | null = null;
+  if (process.env.BOT_TOKEN) {
+    bot = new BotManager({
+      botPath: config.botPath,
+      serverUrl: `http://localhost:${config.port}`,
+      isWindows: process.platform === 'win32',
+    });
+    bot.start();
+  } else {
+    log.startup('BOT_TOKEN not set — bot not started');
+  }
 
   let shuttingDown = false;
   const shutdown = (signal: string): void => {
@@ -113,7 +118,7 @@ async function main(): Promise<void> {
       process.exit(1);
     }, 10_000);
     timer.unref();
-    void bot.stop().finally(() => {
+    void (bot?.stop() ?? Promise.resolve()).finally(() => {
       server.close((err) => {
         if (err) {
           log.shutdown('server close error', { error: err.message });

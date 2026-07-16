@@ -1,6 +1,5 @@
 @echo off
 setlocal
-
 cd /d "%~dp0"
 
 if not exist "node_modules" (
@@ -11,8 +10,16 @@ if not exist "node_modules" (
 
 if not exist "apps\server\.env" (
   echo Creating apps\server\.env from template...
-  copy /Y "apps\server\.env.example" "apps\server\.env"
-  echo WARNING: edit apps\server\.env and set JWT_SECRET / BOT_SHARED_SECRET before testing.
+  if exist "apps\server\.env.example" (
+    copy /Y "apps\server\.env.example" "apps\server\.env"
+  ) else (
+    echo # HelperDesktop Server Config> "apps\server\.env"
+    echo PORT=3001>> "apps\server\.env"
+    echo JWT_SECRET=change-me>> "apps\server\.env"
+    echo JWT_ACCESS_EXPIRY=15m>> "apps\server\.env"
+    echo JWT_REFRESH_EXPIRY=7d>> "apps\server\.env"
+  )
+  echo WARNING: edit apps\server\.env and set JWT_SECRET before running.
   echo.
 )
 
@@ -24,25 +31,17 @@ if not exist "apps\server\helperdesktop.db" (
 
 echo Starting HelperDesktop in DEV mode...
 echo.
-echo Server: tsx watch on apps\server\src\index.ts (auto-reload on changes)
-echo Bot:    managed by server (BotManager spawns tsx in apps\bot)
-echo Client: Vite dev server on http://localhost:5173
-echo.
-echo Press Ctrl+C to stop.
+echo Server: tsx watch port 3001
+echo Client: Vite on http://localhost:5173
+echo Bot:    managed by server
 echo.
 
-start "HelperDesktop Server" cmd /k "cd /d %~dp0 && pnpm --filter @helper/server dev"
-timeout /t 2 /nobreak >nul
-start "HelperDesktop Client" cmd /k "cd /d %~dp0 && pnpm --filter @helper/client dev"
-
+start "HelperDesktop Dev" cmd /k "cd /d %~dp0 && pnpm dev"
+echo All services started. Close the "HelperDesktop Dev" window to stop.
 echo.
-echo Server and client launched in separate windows.
-echo This terminal stays open for logs - press any key to close it.
 pause
-
 goto :eof
 
 :error
-echo.
 echo Setup failed. See errors above.
 exit /b 1

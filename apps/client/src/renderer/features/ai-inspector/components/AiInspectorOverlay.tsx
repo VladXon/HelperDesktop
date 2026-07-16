@@ -2,9 +2,15 @@ import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { useAiInspector } from '../hooks/useAiInspector';
 import { formatPrompt } from '../prompt-formatter';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '../../../components/ui/dialog';
 
 export function AiInspectorOverlay(): React.JSX.Element | null {
-  const { enabled, hovered, hoveredInfo } = useAiInspector();
+  const { enabled, hovered, hoveredInfo, selectedInfo, clearSelected } = useAiInspector();
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
@@ -63,6 +69,25 @@ export function AiInspectorOverlay(): React.JSX.Element | null {
           {hoveredInfo ? formatPrompt(hoveredInfo) : ''}
         </pre>
       </div>
+
+      <Dialog open={selectedInfo !== null} onOpenChange={(open) => { if (!open) clearSelected(); }}>
+        <DialogContent className="max-h-[80vh] max-w-2xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedInfo?.name ?? 'Component'}
+              {selectedInfo?.file ? (
+                <span className="ml-2 text-xs font-normal text-text-muted">
+                  {selectedInfo.file}
+                  {selectedInfo.line ? `:${selectedInfo.line}` : ''}
+                </span>
+              ) : null}
+            </DialogTitle>
+          </DialogHeader>
+          <pre className="overflow-auto rounded border border-border bg-bg-primary p-3 font-mono text-xs leading-relaxed text-text-secondary">
+            {selectedInfo ? formatPrompt(selectedInfo) : ''}
+          </pre>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

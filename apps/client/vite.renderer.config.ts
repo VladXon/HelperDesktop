@@ -5,6 +5,8 @@ import { resolve } from 'node:path';
 const RADIX_PACKAGES = [
   '@radix-ui/primitive',
   '@radix-ui/react-accordion',
+  '@radix-ui/react-collection',
+  '@radix-ui/react-collapsible',
   '@radix-ui/react-compose-refs',
   '@radix-ui/react-context',
   '@radix-ui/react-dialog',
@@ -29,11 +31,39 @@ const RADIX_PACKAGES = [
   '@radix-ui/react-use-callback-ref',
   '@radix-ui/react-use-controllable-state',
   '@radix-ui/react-use-escape-keydown',
+  '@radix-ui/react-use-is-hydrated',
   '@radix-ui/react-use-layout-effect',
+  '@radix-ui/react-use-previous',
   '@radix-ui/react-use-size',
   '@radix-ui/react-visually-hidden',
   '@radix-ui/number',
   '@radix-ui/rect',
+];
+
+const MARKDOWN_PACKAGES = [
+  'react-markdown',
+  'remark-gfm',
+  'remark-parse',
+  'remark-rehype',
+  'rehype-sanitize',
+  'unified',
+  'unist-util-visit',
+  'vfile',
+  'mdast-util-gfm',
+  'micromark-extension-gfm',
+  'hast-util-sanitize',
+  'hast-util-to-jsx-runtime',
+  'html-url-attributes',
+  'devlop',
+  'scheduler',
+];
+
+const UTILITY_PACKAGES = [
+  'aria-hidden',
+  'react-remove-scroll',
+  'dijkstrajs',
+  '@floating-ui/dom',
+  '@floating-ui/react-dom',
 ];
 
 export default defineConfig({
@@ -45,10 +75,29 @@ export default defineConfig({
     dedupe: [...RADIX_PACKAGES, 'react', 'react-dom', '@tanstack/react-query', '@tanstack/query-core'],
   },
   optimizeDeps: {
-    include: [...RADIX_PACKAGES, 'react', 'react-dom', '@tanstack/react-query', '@floating-ui/react-dom'],
+    entries: ['index.html'],
+    include: [
+      ...RADIX_PACKAGES,
+      ...MARKDOWN_PACKAGES,
+      ...UTILITY_PACKAGES,
+      'react',
+      'react-dom',
+      '@tanstack/react-query',
+      '@tanstack/query-core',
+  'qrcode',
+  'cmdk',
+  'framer-motion',
+  'motion-utils',
+  'motion-dom',
+  'class-variance-authority',
+      'clsx',
+      'tailwind-merge',
+      'react-hotkeys-hook',
+      '@phosphor-icons/react',
+    ],
   },
   build: {
-    outDir: '.vite/build',
+    outDir: '.vite/build/renderer',
     emptyOutDir: false,
     rollupOptions: {
       input: { index: resolve(__dirname, 'index.html') },

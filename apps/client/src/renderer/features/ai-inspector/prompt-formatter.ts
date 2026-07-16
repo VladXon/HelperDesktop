@@ -7,6 +7,18 @@ export interface ComponentInfo {
   state: Record<string, unknown> | null;
 }
 
+function safeReplacer(): (key: string, value: unknown) => unknown {
+  const seen = new WeakSet<object>();
+  return (key: string, value: unknown): unknown => {
+    if (typeof value === 'object' && value !== null) {
+      if ('$$typeof' in value && 'type' in value) return '[React Element]';
+      if (seen.has(value)) return '[Circular]';
+      seen.add(value);
+    }
+    return value;
+  };
+}
+
 export function formatPrompt(info: ComponentInfo): string {
   const lines: string[] = [];
   lines.push(`Component: ${info.name}`);
@@ -17,13 +29,13 @@ export function formatPrompt(info: ComponentInfo): string {
   if (Object.keys(info.props).length > 0) {
     lines.push('Props:');
     lines.push('```json');
-    lines.push(JSON.stringify(info.props, null, 2));
+    lines.push(JSON.stringify(info.props, safeReplacer(), 2));
     lines.push('```');
   }
   if (info.state && Object.keys(info.state).length > 0) {
     lines.push('State:');
     lines.push('```json');
-    lines.push(JSON.stringify(info.state, null, 2));
+    lines.push(JSON.stringify(info.state, safeReplacer(), 2));
     lines.push('```');
   }
   lines.push('');

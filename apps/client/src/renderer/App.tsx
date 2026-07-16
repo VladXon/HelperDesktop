@@ -6,12 +6,13 @@ import { SettingsProvider } from './providers/SettingsProvider';
 import { AuthProvider, useAuth } from './providers/AuthProvider';
 import { RouterProvider, useRouter } from './providers/RouterProvider';
 import { TooltipProvider } from './components/ui/tooltip';
+import { ErrorBoundary } from './components/ui/error-boundary';
 import { LoginScreen } from './features/auth';
 import { Titlebar, Sidebar, CommandPalette } from './features/layout';
 import { NotesPage } from './features/notes';
 import { PresetsPage } from './features/presets';
 import { SettingsPage } from './features/settings';
-import { AiInspectorOverlay } from './features/ai-inspector';
+import { AiInspectorOverlay, AiInspectorProvider } from './features/ai-inspector';
 import { onNoteLink } from './lib/deep-link';
 
 function MainApp(): React.JSX.Element {
@@ -42,20 +43,22 @@ function MainApp(): React.JSX.Element {
   }, [navigate]);
 
   return (
-    <div className="flex h-screen w-screen flex-col bg-bg-primary text-text-primary">
-      <Titlebar />
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
-        <main className="flex-1 overflow-hidden">
-          {current.page === 'notes' ? <NotesPage /> : null}
-          {current.page === 'presets' ? <PresetsPage /> : null}
-          {current.page === 'settings' ? <SettingsPage /> : null}
-        </main>
+    <AiInspectorProvider>
+      <div className="flex h-screen w-screen flex-col bg-bg-primary text-text-primary">
+        <Titlebar />
+        <div className="flex flex-1 overflow-hidden">
+          <Sidebar />
+          <main className="flex-1 overflow-hidden">
+            {current.page === 'notes' ? <NotesPage /> : null}
+            {current.page === 'presets' ? <PresetsPage /> : null}
+            {current.page === 'settings' ? <SettingsPage /> : null}
+          </main>
+        </div>
+        <CommandPalette />
+        <ErrorBoundary><AiInspectorOverlay /></ErrorBoundary>
+        <div className="sr-only">{user?.login}</div>
       </div>
-      <CommandPalette />
-      <AiInspectorOverlay />
-      <div className="sr-only">{user?.login}</div>
-    </div>
+    </AiInspectorProvider>
   );
 }
 

@@ -6,7 +6,7 @@ import { readJson, writeJson } from './safe-storage.js';
 import type { ServerUrlFile } from './types.js';
 
 const SERVER_URL_FILE = 'server-url.json';
-const DEFAULT_SERVER_URL = 'http://localhost:3001';
+const DEFAULT_SERVER_URL = 'http://178.172.137.167:3001';
 
 let cachedServerUrl: string | null = null;
 

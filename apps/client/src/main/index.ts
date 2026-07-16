@@ -53,7 +53,7 @@ function createWindow(): void {
     show: false,
     backgroundColor: '#08080a',
     webPreferences: {
-      preload: join(__dirname, '..', 'preload', 'index.js'),
+      preload: join(__dirname, 'preload.js'),
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
@@ -71,11 +71,12 @@ function createWindow(): void {
     return { action: 'deny' };
   });
 
-  const devUrl = process.env['VITE_DEV_SERVER_URL'];
+  declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
+  const devUrl = MAIN_WINDOW_VITE_DEV_SERVER_URL;
   if (devUrl) {
     void win.loadURL(devUrl);
   } else {
-    void win.loadFile(join(__dirname, '..', 'renderer', 'index.html'));
+    void win.loadFile(join(__dirname, 'renderer', 'index.html'));
   }
 
   mainWindow = win;
