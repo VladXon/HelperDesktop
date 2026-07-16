@@ -7,6 +7,12 @@ import { errorHandler } from './middleware/error-handler.js';
 import { requestId } from './middleware/request-id.js';
 import { globalRateLimit } from './middleware/rate-limit.js';
 import { createAuthRouter } from './routes/auth.js';
+import { createNotesRouter } from './routes/notes.js';
+import { createPresetsRouter } from './routes/presets.js';
+import { createSettingsRouter } from './routes/settings.js';
+import { createTelegramRouter } from './routes/telegram.js';
+import { createInternalRouter } from './routes/internal.js';
+import { createDevRouter } from './routes/dev.js';
 import { attachWebSocket } from './ws.js';
 import './db/index.js';
 
@@ -59,6 +65,12 @@ export function createApp(): Express {
   });
 
   app.use('/api/auth', createAuthRouter());
+  app.use('/api/notes', createNotesRouter());
+  app.use('/api/presets', createPresetsRouter());
+  app.use('/api/settings', createSettingsRouter());
+  app.use('/api/telegram', createTelegramRouter());
+  app.use('/api/internal/bot', createInternalRouter());
+  app.use('/api/dev', createDevRouter());
 
   app.use((req, res) => {
     res.status(404).json({ error: 'not_found', requestId: req.requestId });
