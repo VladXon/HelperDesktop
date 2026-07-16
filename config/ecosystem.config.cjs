@@ -1,8 +1,9 @@
+const path = require('path');
 module.exports = {
   apps: [
     {
       name: 'helperdesktop-server',
-      cwd: __dirname,
+      cwd: path.resolve(__dirname, '..'),
       script: 'apps/server/dist/index.js',
       instances: 1,
       exec_mode: 'fork',

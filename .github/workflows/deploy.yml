@@ -37,7 +37,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
 
       - name: Install pnpm
         run: npm i -g pnpm@9
@@ -86,7 +85,7 @@ jobs:
             echo "==> Building bot"
             pnpm --filter @helper/bot build
             echo "==> Reloading PM2 processes"
-            pm2 reload config/ecosystem.config.js || pm2 start config/ecosystem.config.js
+            pm2 reload config/ecosystem.config.cjs || pm2 start config/ecosystem.config.cjs
             pm2 save
             echo "==> Recent logs"
             pm2 logs helperdesktop-server --lines 30 --nostream --raw

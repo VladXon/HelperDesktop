@@ -54,6 +54,7 @@ apps/bot/bot-config.json
 tmp/
 temp/
 *.tmp
+*.b64
 
 # Superpowers task tracking
 .superpowers/sdd/

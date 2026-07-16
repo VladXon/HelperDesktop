@@ -263,7 +263,7 @@ Removed `void config`, `void or`, `void isNull`, `void TAG_DEFAULT`, `void THEME
 
 **Deploy:** `pnpm deploy` → runs `bash scripts/deploy.sh` (git pull + install + migrate + build + pm2 reload)
 **Backup:** `pnpm backup` → runs `bash scripts/backup.sh` (sqlite3 .backup, 30d retention)
-**PM2:** `pm2 start config/ecosystem.config.js`, `pm2 save`, `pm2 startup`
+**PM2:** `pm2 start config/ecosystem.config.cjs`, `pm2 save`, `pm2 startup`
 **Health:** `curl http://localhost:3001/api/health`
 **Logs:** `pm2 logs helperdesktop-server --lines 200`
 **DB access:** `cd apps/server && sqlite3 helperdesktop.db`
