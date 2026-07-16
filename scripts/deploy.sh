@@ -25,7 +25,7 @@ ssh "${SSH_OPTS[@]}" "$REMOTE" "set -euo pipefail
   echo '--- build bot ---'
   pnpm --filter @helper/bot build
   echo '--- pm2 reload ---'
-  pm2 reload ecosystem.config.js || pm2 start ecosystem.config.js
+  pm2 reload config/ecosystem.config.js || pm2 start config/ecosystem.config.js
   pm2 save
   echo '--- recent logs ---'
   pm2 logs helperdesktop-server --lines 30 --nostream --raw

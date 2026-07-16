@@ -86,7 +86,7 @@ jobs:
             echo "==> Building bot"
             pnpm --filter @helper/bot build
             echo "==> Reloading PM2 processes"
-            pm2 reload ecosystem.config.js || pm2 start ecosystem.config.js
+            pm2 reload config/ecosystem.config.js || pm2 start config/ecosystem.config.js
             pm2 save
             echo "==> Recent logs"
             pm2 logs helperdesktop-server --lines 30 --nostream --raw
