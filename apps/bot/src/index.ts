@@ -23,11 +23,10 @@ export function createBot(): BotRuntime {
 
   if (!config.token) {
     log.error('BOT_TOKEN missing; cannot start');
-    throw new Error('BOT_TOKEN missing');
+    process.exit(0);
   }
   if (!config.sharedSecret) {
-    log.error('BOT_SHARED_SECRET missing; cannot start');
-    throw new Error('BOT_SHARED_SECRET missing');
+    log.info('BOT_SHARED_SECRET not set; server requests will be rejected with 401');
   }
 
   const bot = new Bot<BotContext>(config.token);

@@ -61,7 +61,7 @@ if (!busy) {
 const child = spawn('npx', ['electron-forge', 'start'], {
   stdio: 'inherit',
   shell: true,
-  env: process.env,
+  env: { ...process.env, HELPER_SERVER_URL: 'http://localhost:3001' },
 });
 
 const cleanup = (code = 0) => {

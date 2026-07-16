@@ -16,6 +16,10 @@ function serverUrlPath(): string {
 
 export async function getServerUrl(): Promise<string> {
   if (cachedServerUrl) return cachedServerUrl;
+  if (process.env.HELPER_SERVER_URL) {
+    cachedServerUrl = process.env.HELPER_SERVER_URL;
+    return cachedServerUrl;
+  }
   const data = await readJson<ServerUrlFile>(SERVER_URL_FILE);
   cachedServerUrl = data?.url ?? DEFAULT_SERVER_URL;
   return cachedServerUrl;
