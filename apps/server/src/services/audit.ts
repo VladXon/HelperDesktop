@@ -9,6 +9,7 @@ export const AUDIT_ACTIONS = [
   'email_change',
   'telegram_link',
   'telegram_unlink',
+  'bot_login_approved',
   'dev_op',
   'dev_restart',
   'login_failed',

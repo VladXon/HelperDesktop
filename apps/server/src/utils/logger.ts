@@ -172,6 +172,8 @@ export const log = {
   bot: (msg: string, meta?: unknown) => logger.info('bot', msg, meta),
   request: (msg: string, meta?: unknown) => logger.info('http', msg, meta),
   requestError: (msg: string, meta?: unknown) => logger.error('http', msg, meta),
+  info: (msg: string, meta?: unknown) => logger.info('app', msg, meta),
+  error: (msg: string, meta?: unknown) => logger.error('app', msg, meta),
 };
 
 export { maskSensitive as mask };
