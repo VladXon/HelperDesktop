@@ -136,7 +136,7 @@ const here = fileURLToPath(import.meta.url);
 const argv1 = process.argv[1] ? resolve(process.argv[1]) : '';
 const isMain = argv1 !== '' && here === argv1;
 
-if (isMain || process.env.HELPER_SERVER_AUTOSTART === '1') {
+if (isMain || process.env.NODE_ENV === 'production' || process.env.HELPER_SERVER_AUTOSTART === '1') {
   void main().catch((err) => {
     logger.fatal('startup', 'fatal during bootstrap', { error: err.message, stack: err.stack });
     process.exit(1);

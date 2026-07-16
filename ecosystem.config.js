@@ -14,9 +14,13 @@ module.exports = {
       time: true,
       env: {
         NODE_ENV: 'production',
+        HELPER_SERVER_AUTOSTART: '1',
+        HELPER_BOT_AUTOSTART: '1',
       },
       env_production: {
         NODE_ENV: 'production',
+        HELPER_SERVER_AUTOSTART: '1',
+        HELPER_BOT_AUTOSTART: '1',
       },
       error_file: 'logs/server-error.log',
       out_file: 'logs/server-out.log',

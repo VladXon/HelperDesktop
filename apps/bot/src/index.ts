@@ -121,7 +121,7 @@ async function main(): Promise<void> {
   }
 }
 
-if (import.meta.url === `file:///${process.argv[1]?.replace(/\\/g, '/')}`) {
+if (import.meta.url === `file:///${process.argv[1]?.replace(/\\/g, '/')}` || process.env.BOT_AUTOSTART === '1') {
   main().catch((err) => {
     logger.fatal('startup', 'fatal during bootstrap', { error: err.message, stack: err.stack });
     process.exit(1);

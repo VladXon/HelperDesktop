@@ -52,6 +52,7 @@ export class BotManager {
       ...process.env,
       SERVER_URL: this.opts.serverUrl,
       BOT_MANAGED: '1',
+      BOT_AUTOSTART: '1',
     };
 
     try {
