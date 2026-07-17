@@ -24,22 +24,36 @@ export class ErrorBoundary extends React.Component<Props, State> {
     console.error('[ErrorBoundary]', error, info.componentStack);
   }
 
+  handleCopy = (): void => {
+    const text = this.state.error?.message ?? 'Unknown error';
+    navigator.clipboard.writeText(text).catch(() => {});
+  };
+
   override render(): React.ReactNode {
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback;
       return (
-        <div className="flex h-screen w-screen flex-col items-center justify-center gap-2 bg-bg-primary p-4 text-text-primary">
-          <div className="text-lg font-semibold text-destructive">Something went wrong</div>
-          <pre className="max-w-xl overflow-auto rounded border border-border bg-bg-secondary p-3 text-xs text-text-muted">
+        <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-bg-primary p-6 text-text-primary">
+          <p className="text-sm font-semibold text-destructive">Something went wrong</p>
+          <pre className="max-w-lg overflow-auto rounded border border-border bg-bg-secondary p-3 text-xs text-text-muted">
             {this.state.error?.message ?? 'Unknown error'}
           </pre>
-          <button
-            type="button"
-            className="rounded-md border border-border bg-bg-primary px-4 py-1 text-sm text-text-primary hover:bg-bg-secondary"
-            onClick={() => this.setState({ hasError: false, error: null })}
-          >
-            Try again
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="rounded-md border border-border bg-bg-primary px-4 py-1.5 text-sm text-text-primary transition-colors hover:bg-bg-secondary"
+              onClick={() => this.setState({ hasError: false, error: null })}
+            >
+              Try again
+            </button>
+            <button
+              type="button"
+              className="rounded-md border border-border bg-bg-primary px-4 py-1.5 text-sm text-text-muted transition-colors hover:bg-bg-secondary"
+              onClick={this.handleCopy}
+            >
+              Copy error
+            </button>
+          </div>
         </div>
       );
     }

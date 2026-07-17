@@ -84,6 +84,9 @@ const api = {
   shell: {
     openExternal: (url: string) => invoke<boolean>('shell:open-external', url),
   },
+  push: {
+    show: (title: string, body: string) => invoke<void>('push:show', title, body),
+  },
 };
 
 contextBridge.exposeInMainWorld('api', api);

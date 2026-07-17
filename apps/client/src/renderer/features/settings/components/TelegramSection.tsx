@@ -19,9 +19,9 @@ export function TelegramSection(): React.JSX.Element {
 
   useEffect(() => {
     if (!code) return;
+    setChecking(true);
     let mounted = true;
     const interval = setInterval(async () => {
-      setChecking(true);
       try {
         const res = await telegramLinkCheck(code);
         if (!mounted) return;
@@ -29,13 +29,12 @@ export function TelegramSection(): React.JSX.Element {
           setCode(null);
           setQrDataUrl(null);
           setDeepLink(null);
+          setChecking(false);
           cancelledRef.current = true;
           await qc.invalidateQueries({ queryKey: ['telegram', 'status'] });
         }
       } catch (e) {
         if (mounted) setError((e as Error).message);
-      } finally {
-        if (mounted) setChecking(false);
       }
     }, 2000);
     return () => { mounted = false; clearInterval(interval); };
@@ -83,76 +82,78 @@ export function TelegramSection(): React.JSX.Element {
 
   if (status.data?.linked) {
     return (
-      <div className="space-y-4">
-        <div className="rounded-lg border border-white/10 bg-black/20 backdrop-blur-sm p-4">
+      <div className="space-y-3">
+        <div className="rounded-xl border border-border bg-bg-secondary p-4">
           <div className="flex items-center gap-2 text-green-400">
             <CheckCircle size={16} weight="fill" />
-            Telegram привязан
+            <span className="text-sm font-medium text-text-primary">Telegram привязан</span>
           </div>
           {status.data.telegramId ? (
-            <div className="mt-1 text-xs text-text-muted">ID: {status.data.telegramId}</div>
+            <p className="mt-1 text-xs text-text-muted">ID: {status.data.telegramId}</p>
           ) : null}
         </div>
-        <Button variant="destructive" onClick={onUnlink}>Отвязать</Button>
-        {error ? <div className="text-xs text-red-400">{error}</div> : null}
+        <Button variant="destructive" onClick={onUnlink} className="w-full">Отвязать</Button>
+        {error ? <p className="text-xs text-red-400 text-center">{error}</p> : null}
       </div>
     );
   }
 
   if (code) {
     return (
-      <div className="space-y-4">
-        <div className="overflow-hidden rounded-xl border border-accent/30 bg-gradient-to-br from-accent/10 via-transparent to-accent/5 p-5 backdrop-blur-xl">
-          <div className="flex items-center gap-2 text-accent">
-            <TelegramLogo size={18} weight="fill" />
-            <span className="text-label-sm font-semibold">Привязка Telegram</span>
+      <div className="space-y-3">
+        <div className="rounded-xl border border-border bg-bg-secondary p-5">
+          <div className="flex items-center gap-2">
+            <TelegramLogo size={16} weight="fill" className="text-accent" />
+            <span className="text-sm font-medium text-text-primary">Привязка Telegram</span>
           </div>
 
-          {qrDataUrl ? (
-            <div className="mt-4 flex justify-center">
-              <div className="rounded-xl border border-white/10 bg-white/5 p-2">
+          <div className="mt-5 flex flex-col items-center gap-4">
+            <div
+              className="overflow-hidden rounded-xl border border-border bg-black/20 p-3"
+              style={{ minHeight: 196, minWidth: 196 }}
+            >
+              {qrDataUrl ? (
                 <img src={qrDataUrl} alt="QR код" className="h-[180px] w-[180px]" />
-              </div>
+              ) : (
+                <div className="flex h-[180px] w-[180px] items-center justify-center text-xs text-text-muted">
+                  Загрузка QR...
+                </div>
+              )}
             </div>
-          ) : null}
 
-          <div className="mt-4 flex items-center justify-center">
-            <div className="relative">
-              <div className="absolute inset-0 rounded-lg bg-accent/20 blur-sm" />
-              <div className="relative flex items-center gap-3 rounded-lg border border-accent/20 bg-black/40 px-6 py-4">
-                <span className="font-mono text-3xl font-bold tracking-[0.25em] text-accent">
-                  {code}
-                </span>
-                <button
-                  onClick={onCopy}
-                  className="flex h-9 w-9 items-center justify-center rounded-md border border-white/10 bg-white/5 transition-colors hover:bg-white/10"
-                  title="Скопировать"
-                >
-                  {copied ? (
-                    <CheckCircle size={16} weight="fill" className="text-green-400" />
-                  ) : (
-                    <Copy size={16} className="text-text-secondary" />
-                  )}
-                </button>
-              </div>
+            <div className="flex items-center gap-2.5">
+              <span className="font-mono text-2xl font-bold tracking-[0.2em] text-accent">
+                {code}
+              </span>
+              <button
+                onClick={onCopy}
+                className="flex h-7 w-7 items-center justify-center rounded-md text-text-muted transition-colors hover:text-text-primary"
+                title="Скопировать"
+              >
+                {copied ? (
+                  <CheckCircle size={14} weight="fill" className="text-green-400" />
+                ) : (
+                  <Copy size={14} />
+                )}
+              </button>
             </div>
           </div>
 
-          <div className="mt-3 space-y-2 text-xs text-text-muted">
-            <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/20 text-[10px] text-accent">1</span>
-              Отсканируйте QR код или нажмите кнопку ниже
+          <div className="mt-4 space-y-1.5">
+            <div className="flex items-center gap-2.5 text-xs text-text-muted">
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+              1. Отсканируйте QR или нажмите кнопку ниже
             </div>
-            <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/20 text-[10px] text-accent">2</span>
-              Подтвердите привязку в Telegram
+            <div className="flex items-center gap-2.5 text-xs text-text-muted">
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+              2. Подтвердите привязку в Telegram
             </div>
           </div>
 
           {deepLink ? (
             <button
               onClick={() => window.api.shell.openExternal(deepLink)}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-accent/30 bg-accent/10 px-4 py-2.5 text-sm font-medium text-accent transition-colors hover:bg-accent/20"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
             >
               <TelegramLogo size={16} weight="fill" />
               Открыть в Telegram
@@ -161,18 +162,16 @@ export function TelegramSection(): React.JSX.Element {
           ) : null}
 
           {checking ? (
-            <div className="mt-2 flex items-center gap-2 text-xs text-text-muted">
-              <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-accent" />
+            <div className="mt-3 flex items-center justify-center gap-2 text-xs text-text-muted">
+              <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
               Ожидание подтверждения...
             </div>
           ) : null}
         </div>
 
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => { setCode(null); setQrDataUrl(null); setDeepLink(null); cancelledRef.current = true; }} className="flex-1">Отмена</Button>
-        </div>
+        <Button variant="outline" onClick={() => { setCode(null); setQrDataUrl(null); setDeepLink(null); setChecking(false); setError(null); cancelledRef.current = true; }} className="w-full">Отмена</Button>
 
-        {error ? <div className="text-xs text-red-400">{error}</div> : null}
+        {error ? <p className="text-xs text-red-400 text-center">{error}</p> : null}
       </div>
     );
   }

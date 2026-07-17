@@ -77,11 +77,11 @@ export function PresetEditDialog({ open, onOpenChange, preset, onSaved }: Preset
         <DialogHeader>
           <DialogTitle>{preset ? 'Редактирование пресета' : 'Новый пресет'}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={onSubmit} className="flex flex-col gap-3">
-          <div className="grid grid-cols-[80px_1fr] gap-2">
+        <form onSubmit={onSubmit} className="flex flex-col gap-4 pb-2">
+          <div className="grid grid-cols-[auto_1fr] gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="preset-icon">Иконка</Label>
-              <Input id="preset-icon" value={icon} onChange={(e) => setIcon(e.target.value)} maxLength={32} placeholder="🚀" />
+              <Input id="preset-icon" value={icon} onChange={(e) => setIcon(e.target.value)} maxLength={32} placeholder="🚀" className="w-24" />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="preset-name">Название</Label>
@@ -89,15 +89,14 @@ export function PresetEditDialog({ open, onOpenChange, preset, onSaved }: Preset
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <Label>Приложения</Label>
+            <div className="flex items-center gap-2">
+              <Label className="grow">Приложения</Label>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => setApps((a) => [...a, { name: '', path: '', runAsAdmin: false }])}
                 disabled={apps.length >= 32}
-                className="gap-2"
               >
                 <Plus size={14} /> Добавить
               </Button>
@@ -113,7 +112,7 @@ export function PresetEditDialog({ open, onOpenChange, preset, onSaved }: Preset
               ))}
             </div>
           </div>
-          {error ? <div className="text-xs text-red-400">{error}</div> : null}
+          {error ? <p className="text-xs text-red-400">{error}</p> : null}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Отмена</Button>
             <Button type="submit" disabled={create.isPending || update.isPending}>
@@ -121,7 +120,7 @@ export function PresetEditDialog({ open, onOpenChange, preset, onSaved }: Preset
             </Button>
           </DialogFooter>
         </form>
-        <AiInspectorDevPanel />
+        {import.meta.env.DEV ? <AiInspectorDevPanel /> : null}
       </DialogContent>
     </Dialog>
   );

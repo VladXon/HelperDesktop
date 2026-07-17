@@ -37,6 +37,14 @@ General project knowledge and subtle system behavior not obvious from code or do
 - Shared package (`@helper/shared`) is not pre-built — first import at runtime may fail.
 - `start-dev.bat` writes `JWT_ACCESS_EXPIRY` and `JWT_REFRESH_EXPIRY` to `.env` that are never read by config.
 
+## AI Push Notifications (Windows Toast)
+
+- Main process watches `{userData}/ai-push.json` (default: `%APPDATA%/ElectronHelper/ai-push.json`) for changes and shows native Windows toasts.
+- Override path via `AI_PUSH_FILE` env var.
+- CLI script: `node scripts/push-notify.mjs <title> <body>` — writes to the watched file.
+- AI can use `bash` to call the script or write directly to the JSON file.
+- IPC available from renderer: `window.api.push.show(title, body)`.
+
 ## Testing
 
 - Server integration tests use supertest + in-memory SQLite.

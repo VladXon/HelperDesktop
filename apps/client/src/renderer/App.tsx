@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from './providers/AuthProvider';
 import { RouterProvider, useRouter } from './providers/RouterProvider';
 import { TooltipProvider } from './components/ui/tooltip';
 import { ErrorBoundary } from './components/ui/error-boundary';
+import { ToastProvider } from './components/ui/toast';
 import { LoginScreen } from './features/auth';
 import { Titlebar, Sidebar, CommandPalette } from './features/layout';
 import { NotesPage } from './features/notes';
@@ -89,9 +90,11 @@ function MainApp(): React.JSX.Element {
         <div className="flex flex-1 overflow-hidden">
           <Sidebar />
           <main className="flex-1 overflow-hidden">
-            {current.page === 'notes' ? <NotesPage /> : null}
-            {current.page === 'presets' ? <PresetsPage /> : null}
-            {current.page === 'settings' ? <SettingsPage /> : null}
+            <ErrorBoundary>
+              {current.page === 'notes' ? <NotesPage /> : null}
+              {current.page === 'presets' ? <PresetsPage /> : null}
+              {current.page === 'settings' ? <SettingsPage /> : null}
+            </ErrorBoundary>
           </main>
         </div>
       </div>
@@ -122,7 +125,9 @@ export function App(): React.JSX.Element {
         <AuthProvider>
           <RouterProvider>
             <TooltipProvider delayDuration={200}>
-              <RoutedShell />
+              <ToastProvider>
+                <RoutedShell />
+              </ToastProvider>
             </TooltipProvider>
           </RouterProvider>
         </AuthProvider>

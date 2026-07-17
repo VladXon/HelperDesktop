@@ -128,6 +128,9 @@ export interface ElectronApi {
   shell: {
     openExternal: (url: string) => Promise<boolean>;
   };
+  push: {
+    show: (title: string, body: string) => Promise<void>;
+  };
 }
 
 declare global {

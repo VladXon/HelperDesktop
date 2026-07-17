@@ -1,6 +1,6 @@
 import type * as React from 'react';
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useHotkeys } from 'react-hotkeys-hook';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { FloppyDisk, NotePencil, Spinner } from '@phosphor-icons/react';
 import {
@@ -11,12 +11,15 @@ import {
 } from '../../../components/ui/dialog';
 import { Button } from '../../../components/ui/button';
 import { Switch } from '../../../components/ui/switch';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../../../components/ui/tooltip';
 import { MarkdownEditor } from './MarkdownEditor';
 import { TagInput } from './TagInput';
 import { ReminderPicker } from './ReminderPicker';
 import { AiInspectorDevPanel } from '../../ai-inspector';
 import { useCreateNote } from '../hooks/useCreateNote';
 import { useUpdateNote } from '../hooks/useUpdateNote';
+import { useToast } from '../../../components/ui/toast';
+import { telegramStatus } from '../../settings/api';
 import type { Note } from '../types';
 
 const DRAFT_KEY = 'note-draft';
@@ -41,6 +44,13 @@ export function NoteEditDialog({ open, onOpenChange, note, onSaved }: NoteEditDi
   const titleRef = useRef<HTMLInputElement>(null);
 
   const isPending = create.isPending || update.isPending;
+  const tgStatus = useQuery({
+    queryKey: ['telegram', 'status'],
+    queryFn: telegramStatus,
+    staleTime: 30_000,
+  });
+  const tgLinked = tgStatus.data?.linked ?? false;
+  const { toast } = useToast();
 
   const markClean = useCallback(() => setDirty(false), []);
 
@@ -139,12 +149,25 @@ export function NoteEditDialog({ open, onOpenChange, note, onSaved }: NoteEditDi
       markClean();
       onSaved();
       onOpenChange(false);
+      toast({ variant: 'success', description: note ? 'Заметка сохранена' : 'Заметка создана' });
     } catch (e) {
-      setError((e as Error).message ?? 'Ошибка сохранения');
+      const msg = (e as Error).message ?? 'Ошибка сохранения';
+      setError(msg);
+      toast({ variant: 'error', description: msg });
     }
   };
 
-  useHotkeys('ctrl+enter', (e) => { e.preventDefault(); void onSubmit(); }, { enableOnFormTags: true, enabled: open });
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent): void => {
+      if (e.ctrlKey && e.key === 'Enter') {
+        e.preventDefault();
+        void onSubmit();
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [open, title, body, tags, reminderAt, notifyTelegram, note, onOpenChange]);
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); else onOpenChange(true); }}>
@@ -186,10 +209,21 @@ export function NoteEditDialog({ open, onOpenChange, note, onSaved }: NoteEditDi
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-3">
               <ReminderPicker value={reminderAt} onChange={setReminderAt} />
               <div className="flex items-center gap-3 sm:ml-auto">
-                <label htmlFor="notify-tg" className="text-label-sm text-text-secondary cursor-pointer select-none">
+                <label htmlFor="notify-tg" className={`text-label-sm select-none ${tgLinked ? 'cursor-pointer text-text-secondary' : 'text-text-muted/40'}`}>
                   Уведомить в Telegram
                 </label>
-                <Switch id="notify-tg" checked={notifyTelegram} onCheckedChange={setNotifyTelegram} />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span tabIndex={0}>
+                      <Switch id="notify-tg" checked={notifyTelegram} onCheckedChange={setNotifyTelegram} disabled={!tgLinked} />
+                    </span>
+                  </TooltipTrigger>
+                  {!tgLinked ? (
+                    <TooltipContent side="top" className="text-xs">
+                      Привяжите Telegram в настройках
+                    </TooltipContent>
+                  ) : null}
+                </Tooltip>
               </div>
             </div>
           </div>
@@ -237,7 +271,7 @@ export function NoteEditDialog({ open, onOpenChange, note, onSaved }: NoteEditDi
             </div>
           </DialogFooter>
         </motion.div>
-        <AiInspectorDevPanel />
+        {import.meta.env.DEV ? <AiInspectorDevPanel /> : null}
       </DialogContent>
     </Dialog>
   );

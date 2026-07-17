@@ -8,6 +8,8 @@ import { registerTelegramIpc } from './ipc/telegram.js';
 import { registerServerIpc } from './ipc/server.js';
 import { registerDialogIpc } from './ipc/dialog.js';
 import { registerWindowIpc, registerShellIpc, setMainWindow, setupDeepLink, handleDeepLink } from './ipc/window.js';
+import { registerPushIpc } from './ipc/push.js';
+import { startPushWatcher } from './push-watcher.js';
 
 if (requireElectronSquirrel()) app.quit();
 
@@ -44,6 +46,7 @@ function registerAllIpc(): void {
   registerDialogIpc();
   registerWindowIpc();
   registerShellIpc();
+  registerPushIpc();
 }
 
 function createWindow(): void {
@@ -93,6 +96,7 @@ app.on('ready', () => {
   registerAllIpc();
   setupDeepLink(getMainWindow);
   createWindow();
+  startPushWatcher();
 
   const { app: electronApp } = require('electron') as typeof import('electron');
   void electronApp;

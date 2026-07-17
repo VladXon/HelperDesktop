@@ -102,7 +102,10 @@ export function createNotesRouter(): Router {
       if (data.body !== undefined) update.body = data.body;
       if (data.tags !== undefined) update.tags = JSON.stringify(data.tags);
       if (data.reminderAt !== undefined) update.reminderAt = data.reminderAt;
-      if (data.notifyTelegram !== undefined) update.notifyTelegram = data.notifyTelegram;
+      if (data.notifyTelegram !== undefined) {
+        update.notifyTelegram = data.notifyTelegram;
+        if (data.notifyTelegram) update.telegramNotified = false;
+      }
       if (data.pinned !== undefined) update.pinned = data.pinned;
       if (data.completed !== undefined) update.completed = data.completed;
 
