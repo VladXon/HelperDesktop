@@ -1,4 +1,4 @@
-import * as React from 'react';
+import type * as React from 'react';
 import { useAiInspector } from '../hooks/useAiInspector';
 import { formatPrompt } from '../prompt-formatter';
 import { Bug } from '@phosphor-icons/react';

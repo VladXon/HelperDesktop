@@ -28,10 +28,10 @@ export interface AuditInput {
   metadata?: Record<string, unknown> | null;
 }
 
-export async function audit(
+export function audit(
   db: BetterSQLite3Database<typeof schema>,
   input: AuditInput,
-): Promise<void> {
+): void {
   db.insert(schema.auditLog)
     .values({
       userId: input.userId ?? null,

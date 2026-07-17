@@ -1,4 +1,4 @@
-import * as React from 'react';
+import type * as React from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../../../components/ui/accordion';
 import { useAuth } from '../../../providers/AuthProvider';
 import { AccountSection } from './AccountSection';
@@ -21,7 +21,7 @@ export function SettingsPage(): React.JSX.Element {
               <AccordionTrigger className="px-8 sm:px-10 py-5 hover:bg-white/5 transition-colors text-headline-md font-bold text-text-primary">
                 Аккаунт
               </AccordionTrigger>
-              <AccordionContent className="px-8 sm:px-10 pb-8">
+              <AccordionContent className="px-8 sm:px-10 pt-6 pb-8">
                 <AccountSection />
               </AccordionContent>
             </AccordionItem>
@@ -29,7 +29,7 @@ export function SettingsPage(): React.JSX.Element {
               <AccordionTrigger className="px-8 sm:px-10 py-5 hover:bg-white/5 transition-colors text-headline-md font-bold text-text-primary">
                 Telegram
               </AccordionTrigger>
-              <AccordionContent className="px-8 sm:px-10 pb-8">
+              <AccordionContent className="px-8 sm:px-10 pt-6 pb-8">
                 <TelegramSection />
               </AccordionContent>
             </AccordionItem>
@@ -39,7 +39,7 @@ export function SettingsPage(): React.JSX.Element {
                   <AccordionTrigger className="px-8 sm:px-10 py-5 hover:bg-white/5 transition-colors text-headline-md font-bold text-text-primary">
                     Оформление
                   </AccordionTrigger>
-                  <AccordionContent className="px-8 sm:px-10 pb-8">
+                  <AccordionContent className="px-8 sm:px-10 pt-6 pb-8">
                     <ThemeSection />
                   </AccordionContent>
                 </AccordionItem>
@@ -47,7 +47,7 @@ export function SettingsPage(): React.JSX.Element {
                   <AccordionTrigger className="px-8 sm:px-10 py-5 hover:bg-white/5 transition-colors text-headline-md font-bold text-text-primary">
                     Сервер
                   </AccordionTrigger>
-                  <AccordionContent className="px-8 sm:px-10 pb-8">
+                  <AccordionContent className="px-8 sm:px-10 pt-6 pb-8">
                     <ServerSection />
                   </AccordionContent>
                 </AccordionItem>

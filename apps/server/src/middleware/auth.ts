@@ -4,13 +4,12 @@ import type { NextFunction, Request, Response } from 'express';
 import { config } from '../config.js';
 import { getDb, schema, type User } from '../db/index.js';
 import { verifyToken } from '../auth/jwt.js';
-import { verifyPassword } from '../auth/password.js';
 import { log } from '../utils/logger.js';
 import { HttpError } from './error-handler.js';
 
 export type AuthedUser = User;
 
-async function loadUser(userId: number): Promise<AuthedUser | null> {
+function loadUser(userId: number): AuthedUser | null {
   const row = getDb().select().from(schema.users).where(eq(schema.users.id, userId)).all()[0];
   if (!row) return null;
   return { ...row, isDev: Boolean(row.isDev) } as AuthedUser;
@@ -25,11 +24,11 @@ function sessionExists(token: string): boolean {
   return Boolean(row);
 }
 
-export async function requireAuth(
+export function requireAuth(
   req: Request,
   _res: Response,
   next: NextFunction,
-): Promise<void> {
+): void {
   try {
     const auth = req.headers.authorization;
     if (typeof auth === 'string' && auth.startsWith('Bearer ')) {
@@ -43,25 +42,12 @@ export async function requireAuth(
         log.security('auth_failed', { reason: 'session_revoked', userId: payload.userId, ip: req.ip });
         throw new HttpError(401, 'unauthorized', 'Invalid credentials');
       }
-      const user = await loadUser(payload.userId);
+      const user = loadUser(payload.userId);
       if (!user) {
         log.security('auth_failed', { reason: 'user_missing', userId: payload.userId, ip: req.ip });
         throw new HttpError(401, 'unauthorized', 'Invalid credentials');
       }
       req.user = user;
-      next();
-      return;
-    }
-
-    const login = req.headers['x-auth-login'];
-    const password = req.headers['x-auth-password'];
-    if (typeof login === 'string' && typeof password === 'string') {
-      const row = getDb().select().from(schema.users).where(eq(schema.users.login, login)).all()[0];
-      if (!row || !(await verifyPassword(password, row.password))) {
-        log.security('auth_failed', { reason: 'bad_reauth', login, ip: req.ip });
-        throw new HttpError(401, 'unauthorized', 'Invalid credentials');
-      }
-      req.user = { ...row, isDev: Boolean(row.isDev) } as AuthedUser;
       next();
       return;
     }

@@ -4,6 +4,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../compo
 import { useQrLogin } from '../hooks/useQrLogin';
 import { useAuth } from '../../../providers/AuthProvider';
 
+function isValidDeepLink(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return ['https:', 'http:', 'tg:'].includes(parsed.protocol);
+  } catch {
+    return false;
+  }
+}
+
 export function QrLoginPanel(): React.JSX.Element {
   const { qrDataUrl, deepLink, tgDeepLink, error, status, approvedSession, request, cancel } = useQrLogin();
   const { setSession } = useAuth();
@@ -48,28 +57,22 @@ export function QrLoginPanel(): React.JSX.Element {
             <p className="text-sm text-text-muted text-center">
               Отсканируйте QR-код в Telegram
             </p>
-            {tgDeepLink ? (
-              <a
-                href={tgDeepLink}
-                target="_blank"
-                rel="noreferrer"
-                className="w-full"
+            {tgDeepLink && isValidDeepLink(tgDeepLink) ? (
+              <Button
+                variant="accent"
+                className="w-full gap-2"
+                onClick={() => window.api.shell.openExternal(tgDeepLink)}
               >
-                <Button variant="accent" className="w-full gap-2">
-                  Открыть в Telegram
-                </Button>
-              </a>
-            ) : deepLink ? (
-              <a
-                href={deepLink}
-                target="_blank"
-                rel="noreferrer"
-                className="w-full"
+                Открыть в Telegram
+              </Button>
+            ) : deepLink && isValidDeepLink(deepLink) ? (
+              <Button
+                variant="accent"
+                className="w-full gap-2"
+                onClick={() => window.api.shell.openExternal(deepLink)}
               >
-                <Button variant="accent" className="w-full gap-2">
-                  Открыть в Telegram
-                </Button>
-              </a>
+                Открыть в Telegram
+              </Button>
             ) : null}
           </div>
         ) : null}

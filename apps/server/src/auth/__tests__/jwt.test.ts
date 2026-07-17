@@ -57,7 +57,7 @@ describe('signToken / verifyToken', () => {
 
   it('returns null for a token signed with a different secret', () => {
     const real = signToken({ userId: 1, login: 'a' });
-    const fake = real.split('.').slice(0, 2).join('.') + '.invalidsig';
+    const fake = `${real.split('.').slice(0, 2).join('.')}.invalidsig`;
     expect(verifyToken(fake)).toBeNull();
   });
 });

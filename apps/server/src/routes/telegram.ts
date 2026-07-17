@@ -73,7 +73,9 @@ export function createTelegramRouter(): Router {
           expiresAt,
         })
         .run();
-      res.json({ code, expiresIn: LINK_EXPIRES_SECONDS });
+      const botUsername = config.botUsername || 'bot';
+      const deepLink = `https://t.me/${botUsername}?start=link_${code}`;
+      res.json({ code, deepLink, expiresIn: LINK_EXPIRES_SECONDS });
     } catch (e) {
       next(e);
     }

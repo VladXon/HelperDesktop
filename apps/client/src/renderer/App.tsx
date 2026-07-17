@@ -1,6 +1,5 @@
-import * as React from 'react';
-import { useEffect } from 'react';
-import { useHotkeys } from 'react-hotkeys-hook';
+import type * as React from 'react';
+import { useEffect, useState } from 'react';
 import { QueryProvider } from './providers/QueryProvider';
 import { SettingsProvider } from './providers/SettingsProvider';
 import { AuthProvider, useAuth } from './providers/AuthProvider';
@@ -18,12 +17,48 @@ import { onNoteLink } from './lib/deep-link';
 function MainApp(): React.JSX.Element {
   const { current, navigate, openCommandPalette, closeCommandPalette, isCommandPaletteOpen } = useRouter();
   const { user } = useAuth();
+  const [scanEnabled, setScanEnabled] = useState(false);
 
-  useHotkeys('ctrl+k', (e) => { e.preventDefault(); openCommandPalette(); }, { enableOnFormTags: true });
-  useHotkeys('escape', () => { if (isCommandPaletteOpen) closeCommandPalette(); }, { enableOnFormTags: true });
-  useHotkeys('ctrl+n', (e) => { e.preventDefault(); navigate({ page: 'notes', newNote: true }); });
-  useHotkeys('ctrl+p', (e) => { e.preventDefault(); navigate({ page: 'presets', newPreset: true }); });
-  useHotkeys('ctrl+,', (e) => { e.preventDefault(); navigate({ page: 'settings' }); });
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.ctrlKey && e.key === 'k') {
+        e.preventDefault();
+        openCommandPalette();
+        return;
+      }
+      if (e.key === 'Escape' && isCommandPaletteOpen) {
+        closeCommandPalette();
+        return;
+      }
+      if (!e.ctrlKey || e.key === 'Control') return;
+      switch (e.key) {
+        case 'n':
+          e.preventDefault();
+          navigate({ page: 'notes', newNote: true });
+          break;
+        case 'p':
+          e.preventDefault();
+          navigate({ page: 'presets', newPreset: true });
+          break;
+        case ',':
+          e.preventDefault();
+          navigate({ page: 'settings' });
+          break;
+        case 'F4':
+          e.preventDefault();
+          setScanEnabled((prev) => {
+            const next = !prev;
+            if (import.meta.env.DEV) {
+              import('react-scan').then(({ scan }) => scan({ enabled: next }));
+            }
+            return next;
+          });
+          break;
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isCommandPaletteOpen, openCommandPalette, closeCommandPalette, navigate]);
 
   useEffect(() => {
     const onNewNote = (): void => navigate({ page: 'notes', newNote: true });

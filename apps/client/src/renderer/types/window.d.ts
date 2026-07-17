@@ -64,6 +64,7 @@ export interface PresetUpdateInput {
 export interface ElectronApi {
   auth: {
     login: (login: string, password: string) => Promise<{ token: string; refreshToken: string; expiresIn: number; user: User }>;
+    register: (login: string, password: string, name?: string) => Promise<{ user: User }>;
     saveToken: (login: string, tokenData: { token: string; refreshToken: string; expiresIn: number; user: User }) => Promise<void>;
     logout: () => Promise<void>;
     listAccounts: () => Promise<AccountInfo[]>;
@@ -124,6 +125,9 @@ export interface ElectronApi {
   deepLink: {
     onNote: (callback: (id: number) => void) => () => void;
   };
+  shell: {
+    openExternal: (url: string) => Promise<boolean>;
+  };
 }
 
 declare global {
@@ -131,5 +135,3 @@ declare global {
     api: ElectronApi;
   }
 }
-
-export {};

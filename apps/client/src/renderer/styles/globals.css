@@ -76,6 +76,16 @@ input:focus, textarea:focus, select:focus {
   outline: none;
 }
 
+[cmdk-group-heading] {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  padding: 8px 12px 4px;
+  user-select: none;
+}
+
 @layer components {
   .glass-panel {
     background: rgba(20, 20, 22, 0.4);
@@ -113,7 +123,7 @@ input:focus, textarea:focus, select:focus {
     left: 0;
     top: 50%;
     transform: translateY(-50%);
-    height: 60%;
+    height: 100%;
     width: 2px;
     background-color: #8b5cf6;
     box-shadow: 0 0 8px rgba(139, 92, 246, 0.5);

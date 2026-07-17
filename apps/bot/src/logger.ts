@@ -65,9 +65,9 @@ export class BotLogger {
           meta !== undefined ? ` ${ANSI.gray}${JSON.stringify(meta)}${ANSI.reset}` : ''
         }`;
     if (level === 'error' || level === 'fatal') {
-      process.stderr.write(line + '\n');
+      process.stderr.write(`${line}\n`);
     } else {
-      process.stdout.write(line + '\n');
+      process.stdout.write(`${line}\n`);
     }
   }
 }

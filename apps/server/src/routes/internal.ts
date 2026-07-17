@@ -1,7 +1,10 @@
 import { Router, type NextFunction, type Request, type Response } from 'express';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import {
   botLinkByCodeSchema,
+  botMarkNotifiedSchema,
+  botMarkReadSchema,
+  botMarkReminderSentSchema,
   botQrLoginApproveSchema,
   botUnlinkByTelegramIdSchema,
 } from '@helper/shared/schemas/internal';
@@ -30,14 +33,16 @@ export function createInternalRouter(): Router {
       const { code, telegramId } = parsed.data;
       const db = getDb();
 
-      const candidates = db
+      const action = db
         .select()
         .from(schema.telegramActions)
-        .where(eq(schema.telegramActions.action, 'link_code'))
-        .all();
-      const action = candidates
-        .filter((a) => a.token === code)
-        .sort((a, b) => b.expiresAt - a.expiresAt)[0];
+        .where(
+          and(
+            eq(schema.telegramActions.action, 'link_code'),
+            eq(schema.telegramActions.token, code),
+          ),
+        )
+        .get();
 
       if (!action) throw new HttpError(404, 'not_found', 'Code not found');
       if (isExpired(action.expiresAt)) throw new HttpError(410, 'gone', 'Code expired');
@@ -186,6 +191,54 @@ export function createInternalRouter(): Router {
         userId: link.userId,
         metadata: { via: 'bot' },
       });
+      res.json({ ok: true });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  router.post('/mark-reminder-sent', (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const parsed = botMarkReminderSentSchema.safeParse(req.body);
+      if (!parsed.success) throw new HttpError(400, 'bad_request', 'Invalid input');
+      const { ids } = parsed.data;
+      const db = getDb();
+      db.update(schema.notes)
+        .set({ reminderAt: null })
+        .where(inArray(schema.notes.id, ids))
+        .run();
+      res.json({ ok: true });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  router.post('/mark-notified', (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const parsed = botMarkNotifiedSchema.safeParse(req.body);
+      if (!parsed.success) throw new HttpError(400, 'bad_request', 'Invalid input');
+      const { ids } = parsed.data;
+      const db = getDb();
+      db.update(schema.notes)
+        .set({ telegramNotified: true })
+        .where(inArray(schema.notes.id, ids))
+        .run();
+      res.json({ ok: true });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  router.post('/mark-read', (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const parsed = botMarkReadSchema.safeParse(req.body);
+      if (!parsed.success) throw new HttpError(400, 'bad_request', 'Invalid input');
+      const { id } = parsed.data;
+      const db = getDb();
+      db.update(schema.notes)
+        .set({ telegramNotified: true })
+        .where(eq(schema.notes.id, id))
+        .run();
       res.json({ ok: true });
     } catch (e) {
       next(e);

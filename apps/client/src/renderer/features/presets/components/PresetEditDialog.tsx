@@ -1,10 +1,9 @@
-import * as React from 'react';
+import type * as React from 'react';
 import { useEffect, useState } from 'react';
 import { Plus } from '@phosphor-icons/react';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -77,7 +76,6 @@ export function PresetEditDialog({ open, onOpenChange, preset, onSaved }: Preset
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{preset ? 'Редактирование пресета' : 'Новый пресет'}</DialogTitle>
-          <DialogDescription>Определите набор приложений для быстрого запуска.</DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="flex flex-col gap-3">
           <div className="grid grid-cols-[80px_1fr] gap-2">

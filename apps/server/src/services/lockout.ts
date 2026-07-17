@@ -78,7 +78,7 @@ export function isLockedOut(
 }
 
 function parseSqliteUtc(s: string): number {
-  return new Date(s.replace(' ', 'T') + 'Z').getTime();
+  return new Date(`${s.replace(' ', 'T')}Z`).getTime();
 }
 
 export function clearFailedAttempts(

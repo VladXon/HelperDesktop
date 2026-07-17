@@ -7,6 +7,7 @@ export const telegramStatusSchema = z.object({
 
 export const telegramLinkCodeResponseSchema = z.object({
   code: z.string().min(1).max(64),
+  deepLink: z.string().url(),
   expiresIn: z.number().int().positive(),
 });
 

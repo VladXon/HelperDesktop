@@ -5,6 +5,10 @@ export async function login(login: string, password: string): Promise<TokenData>
   return window.api.auth.login(login, password);
 }
 
+export async function register(login: string, password: string, name?: string): Promise<{ user: User }> {
+  return window.api.auth.register(login, password, name);
+}
+
 export async function listAccounts(): Promise<AccountSummary[]> {
   return window.api.auth.listAccounts();
 }

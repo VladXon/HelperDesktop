@@ -1,7 +1,8 @@
-import * as React from 'react';
-import { useEffect, useState } from 'react';
+import type * as React from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Copy, CheckCircle, TelegramLogo } from '@phosphor-icons/react';
+import { Copy, CheckCircle, TelegramLogo, ArrowSquareOut } from '@phosphor-icons/react';
+import QRCode from 'qrcode';
 import { Button } from '../../../components/ui/button';
 import { telegramLinkCheck, telegramLinkCode, telegramStatus, telegramUnlink } from '../api';
 
@@ -9,9 +10,12 @@ export function TelegramSection(): React.JSX.Element {
   const qc = useQueryClient();
   const status = useQuery({ queryKey: ['telegram', 'status'], queryFn: telegramStatus });
   const [code, setCode] = useState<string | null>(null);
+  const [deepLink, setDeepLink] = useState<string | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [checking, setChecking] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const cancelledRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (!code) return;
@@ -23,6 +27,9 @@ export function TelegramSection(): React.JSX.Element {
         if (!mounted) return;
         if (res.status === 'linked' || res.status === 'expired' || res.status === 'not_found') {
           setCode(null);
+          setQrDataUrl(null);
+          setDeepLink(null);
+          cancelledRef.current = true;
           await qc.invalidateQueries({ queryKey: ['telegram', 'status'] });
         }
       } catch (e) {
@@ -36,9 +43,22 @@ export function TelegramSection(): React.JSX.Element {
 
   const onLink = async (): Promise<void> => {
     setError(null);
+    cancelledRef.current = false;
     try {
       const res = await telegramLinkCode();
       setCode(res.code);
+      const link = res.deepLink || `https://t.me/DesktopHelperIOBot?start=link_${res.code}`;
+      setDeepLink(link);
+      if (!cancelledRef.current) {
+        try {
+          const cvs = document.createElement('canvas');
+          await QRCode.toCanvas(cvs, link, { width: 220, margin: 2 });
+          if (!cancelledRef.current) setQrDataUrl(cvs.toDataURL());
+        } catch (e) {
+          console.error('QR generation failed:', e);
+          setError('QR: ' + (e as Error).message);
+        }
+      }
     } catch (e) {
       setError((e as Error).message);
     }
@@ -88,6 +108,14 @@ export function TelegramSection(): React.JSX.Element {
             <span className="text-label-sm font-semibold">Привязка Telegram</span>
           </div>
 
+          {qrDataUrl ? (
+            <div className="mt-4 flex justify-center">
+              <div className="rounded-xl border border-white/10 bg-white/5 p-2">
+                <img src={qrDataUrl} alt="QR код" className="h-[180px] w-[180px]" />
+              </div>
+            </div>
+          ) : null}
+
           <div className="mt-4 flex items-center justify-center">
             <div className="relative">
               <div className="absolute inset-0 rounded-lg bg-accent/20 blur-sm" />
@@ -110,11 +138,27 @@ export function TelegramSection(): React.JSX.Element {
             </div>
           </div>
 
-          <div className="mt-4 flex items-center gap-2 text-xs text-text-muted">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent/20 text-[10px] text-accent">1</span>
-            Отправьте код в Telegram-бот
-            <span className="inline-flex items-center rounded border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-[10px]">/link</span>
+          <div className="mt-3 space-y-2 text-xs text-text-muted">
+            <div className="flex items-center gap-2">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/20 text-[10px] text-accent">1</span>
+              Отсканируйте QR код или нажмите кнопку ниже
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/20 text-[10px] text-accent">2</span>
+              Подтвердите привязку в Telegram
+            </div>
           </div>
+
+          {deepLink ? (
+            <button
+              onClick={() => window.api.shell.openExternal(deepLink)}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-accent/30 bg-accent/10 px-4 py-2.5 text-sm font-medium text-accent transition-colors hover:bg-accent/20"
+            >
+              <TelegramLogo size={16} weight="fill" />
+              Открыть в Telegram
+              <ArrowSquareOut size={14} />
+            </button>
+          ) : null}
 
           {checking ? (
             <div className="mt-2 flex items-center gap-2 text-xs text-text-muted">
@@ -125,7 +169,7 @@ export function TelegramSection(): React.JSX.Element {
         </div>
 
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setCode(null)} className="flex-1">Отмена</Button>
+          <Button variant="outline" onClick={() => { setCode(null); setQrDataUrl(null); setDeepLink(null); cancelledRef.current = true; }} className="flex-1">Отмена</Button>
         </div>
 
         {error ? <div className="text-xs text-red-400">{error}</div> : null}

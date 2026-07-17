@@ -5,6 +5,7 @@ export interface TelegramStatus {
 
 export interface LinkCodeResponse {
   code: string;
+  deepLink: string;
   expiresIn: number;
 }
 

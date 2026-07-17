@@ -7,7 +7,7 @@ import { registerSettingsIpc } from './ipc/settings.js';
 import { registerTelegramIpc } from './ipc/telegram.js';
 import { registerServerIpc } from './ipc/server.js';
 import { registerDialogIpc } from './ipc/dialog.js';
-import { registerWindowIpc, setMainWindow, setupDeepLink, handleDeepLink } from './ipc/window.js';
+import { registerWindowIpc, registerShellIpc, setMainWindow, setupDeepLink, handleDeepLink } from './ipc/window.js';
 
 if (requireElectronSquirrel()) app.quit();
 
@@ -43,6 +43,7 @@ function registerAllIpc(): void {
   registerServerIpc(getMainWindow);
   registerDialogIpc();
   registerWindowIpc();
+  registerShellIpc();
 }
 
 function createWindow(): void {

@@ -1,7 +1,6 @@
-import * as React from 'react';
+import type * as React from 'react';
 import { ListChecks, Stack, Gear } from '@phosphor-icons/react';
 import { useRouter } from '../../../providers/RouterProvider';
-import { ServerStatusBadge } from './ServerStatusBadge';
 
 interface NavItem {
   id: 'notes' | 'presets' | 'settings';
@@ -30,7 +29,7 @@ export function Sidebar(): React.JSX.Element {
               onClick={() => navigate({ page: it.id } as never)}
               className={`relative flex items-center gap-3 py-3 px-4 transition-all group ${
                 active
-                  ? 'bg-white/5 text-text-primary border-l-2 border-accent rounded-r-lg'
+                  ? 'bg-white/5 text-text-primary rounded-r-lg'
                   : 'text-text-muted hover:text-text-primary hover:bg-white/5 rounded-lg'
               }`}
             >
@@ -46,10 +45,7 @@ export function Sidebar(): React.JSX.Element {
           );
         })}
       </nav>
-      <div className="mt-auto px-4 pb-4">
-        <div className="h-px bg-white/5 mb-4" />
-        <ServerStatusBadge onClick={() => navigate({ page: 'settings' })} />
-      </div>
+
     </aside>
   );
 }

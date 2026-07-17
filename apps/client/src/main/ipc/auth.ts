@@ -1,11 +1,17 @@
 import { ipcMain } from 'electron';
-import type { User, TokenData } from '@helper/shared';
+import type { User, } from '@helper/shared';
 import { apiFetch, HttpError } from '../utils/http-client.js';
 import { readAuthStorage, writeAuthStorage, clearAuthStorage, getActiveAccount } from '../utils/safe-storage.js';
 import { readDeviceId } from '../utils/safe-storage.js';
 import type { AccountInfoLocal } from '../utils/types.js';
 
 export function registerAuthIpc(): void {
+  ipcMain.handle('auth:register', async (_e, login: string, password: string, name?: string) => {
+    return apiFetch<{ user: User }>('/api/auth/register', {
+      method: 'POST', body: { login, password, name }, auth: false,
+    });
+  });
+
   ipcMain.handle('auth:login', async (_e, login: string, password: string) => {
     const deviceId = await readDeviceId();
     const data = await apiFetch<{ token: string; refreshToken: string; expiresIn: number; user: User }>(

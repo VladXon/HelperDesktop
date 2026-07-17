@@ -5,7 +5,7 @@ import { readDeviceId } from '../utils/safe-storage.js';
 
 let wsClient: WebSocket | null = null;
 let reconnectTimer: NodeJS.Timeout | null = null;
-let healthChannel = 'server:health';
+const healthChannel = 'server:health';
 
 function clearReconnect(): void {
   if (reconnectTimer) {

@@ -58,7 +58,7 @@ describe('hashPassword + verifyPassword', () => {
   });
 
   it('handles long passwords', async () => {
-    const long = 'A1' + 'a'.repeat(254);
+    const long = `A1${'a'.repeat(254)}`;
     const hashed = await hashPassword(long);
     expect(await verifyPassword(long, hashed)).toBe(true);
   });

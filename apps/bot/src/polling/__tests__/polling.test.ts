@@ -13,6 +13,18 @@ interface FakeBot {
   callbackRegistrations: Array<{ pattern: RegExp; handler: unknown }>;
 }
 
+function makeFakeServer(): {
+  markReminderSent: ReturnType<typeof vi.fn>;
+  markNotified: ReturnType<typeof vi.fn>;
+  markRead: ReturnType<typeof vi.fn>;
+} {
+  return {
+    markReminderSent: vi.fn(async () => undefined),
+    markNotified: vi.fn(async () => undefined),
+    markRead: vi.fn(async () => undefined),
+  };
+}
+
 function makeFakeBot(): FakeBot {
   const captured: FakeBot['captured'] = [];
   const callbackRegistrations: FakeBot['callbackRegistrations'] = [];
@@ -98,13 +110,6 @@ function insertNote(
   return Number(res.lastInsertRowid);
 }
 
-function readNote(dbPath: string, id: number): Record<string, unknown> | undefined {
-  const db = new Database(dbPath);
-  const row = db.prepare('SELECT * FROM notes WHERE id = ?').get(id) as Record<string, unknown> | undefined;
-  db.close();
-  return row;
-}
-
 describe('reminders poller', () => {
   let setup: ReturnType<typeof createTestDb>;
   beforeEach(() => {
@@ -123,7 +128,8 @@ describe('reminders poller', () => {
       reminderAt: 100,
     });
     const bot = makeFakeBot();
-    const poller = createRemindersPoller(bot as unknown as Parameters<typeof createRemindersPoller>[0], setup.dbPath, {
+    const server = makeFakeServer();
+    const poller = createRemindersPoller(bot as unknown as Parameters<typeof createRemindersPoller>[0], server, setup.dbPath, {
       intervalMs: 1_000_000,
       now: () => 1000,
     });
@@ -133,9 +139,8 @@ describe('reminders poller', () => {
     expect(bot.captured[0]?.chatId).toBe(100);
     expect(bot.captured[0]?.text).toContain('Напоминание: Test');
     expect(bot.captured[0]?.text).toContain('Body text');
+    expect(server.markReminderSent).toHaveBeenCalledWith([noteId]);
     poller.stop();
-    const after = readNote(setup.dbPath, noteId);
-    expect(after?.reminder_at).toBeNull();
   });
 
   it('skips future reminders', async () => {
@@ -147,13 +152,15 @@ describe('reminders poller', () => {
       reminderAt: 5000,
     });
     const bot = makeFakeBot();
-    const poller = createRemindersPoller(bot as unknown as Parameters<typeof createRemindersPoller>[0], setup.dbPath, {
+    const server = makeFakeServer();
+    const poller = createRemindersPoller(bot as unknown as Parameters<typeof createRemindersPoller>[0], server, setup.dbPath, {
       intervalMs: 1_000_000,
       now: () => 1000,
     });
     const sent = await poller.tick();
     expect(sent).toBe(0);
     expect(bot.captured).toHaveLength(0);
+    expect(server.markReminderSent).not.toHaveBeenCalled();
     poller.stop();
   });
 
@@ -166,7 +173,8 @@ describe('reminders poller', () => {
       reminderAt: 100,
     });
     const bot = makeFakeBot();
-    const poller = createRemindersPoller(bot as unknown as Parameters<typeof createRemindersPoller>[0], setup.dbPath, {
+    const server = makeFakeServer();
+    const poller = createRemindersPoller(bot as unknown as Parameters<typeof createRemindersPoller>[0], server, setup.dbPath, {
       intervalMs: 1_000_000,
       now: () => 1000,
     });
@@ -194,16 +202,16 @@ describe('notifications poller', () => {
       notifyTelegram: 1,
     });
     const bot = makeFakeBot();
-    const poller = createNotificationsPoller(bot as unknown as Parameters<typeof createNotificationsPoller>[0], setup.dbPath, {
+    const server = makeFakeServer();
+    const poller = createNotificationsPoller(bot as unknown as Parameters<typeof createNotificationsPoller>[0], server, setup.dbPath, {
       intervalMs: 1_000_000,
     });
     const sent = await poller.tick();
     expect(sent).toBe(1);
     expect(bot.captured[0]?.text).toContain('Notify');
     expect(bot.captured[0]?.text).toContain('body');
+    expect(server.markNotified).toHaveBeenCalledWith([noteId]);
     poller.stop();
-    const after = readNote(setup.dbPath, noteId);
-    expect(after?.telegram_notified).toBe(1);
   });
 
   it('does not re-send already notified', async () => {
@@ -216,12 +224,14 @@ describe('notifications poller', () => {
       telegramNotified: 1,
     });
     const bot = makeFakeBot();
-    const poller = createNotificationsPoller(bot as unknown as Parameters<typeof createNotificationsPoller>[0], setup.dbPath, {
+    const server = makeFakeServer();
+    const poller = createNotificationsPoller(bot as unknown as Parameters<typeof createNotificationsPoller>[0], server, setup.dbPath, {
       intervalMs: 1_000_000,
     });
     const sent = await poller.tick();
     expect(sent).toBe(0);
     expect(bot.captured).toHaveLength(0);
+    expect(server.markNotified).not.toHaveBeenCalled();
     poller.stop();
   });
 });

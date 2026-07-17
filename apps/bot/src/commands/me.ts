@@ -1,4 +1,4 @@
-import { Bot } from 'grammy';
+import type { Bot } from 'grammy';
 import { dynamicMainMenu } from '../keyboards.js';
 import { buildMenu } from '../helpers.js';
 import { log } from '../logger.js';
@@ -64,17 +64,6 @@ export function registerMe(bot: Bot<BotContext>, server: ServerClient): void {
     }
   });
 
-  bot.command('id', async (ctx) => {
-    const id = ctx.from?.id;
-    if (typeof id !== 'number') {
-      await ctx.answerCallbackQuery?.();
-      await ctx.reply('Не удалось определить Telegram ID.', { reply_markup: dynamicMainMenu(false) });
-      return;
-    }
-    const menu = await buildMenu(server, id);
-    await ctx.reply(`Ваш Telegram ID: ${id}`, { reply_markup: menu });
-  });
-
   bot.command('logout', async (ctx) => {
     const telegramId = ctx.from?.id;
     if (!telegramId) {
@@ -88,11 +77,6 @@ export function registerMe(bot: Bot<BotContext>, server: ServerClient): void {
       log.error('logout failed', { error: (e as Error).message });
       await ctx.reply(errorMessage(e, 'Не удалось отвязать аккаунт'), { reply_markup: dynamicMainMenu(false) });
     }
-  });
-
-  bot.command('help', async (ctx) => {
-    const menu = await buildMenu(server, ctx.from?.id);
-    await ctx.reply(HELP_TEXT, { reply_markup: menu });
   });
 
   bot.callbackQuery(/^cmd:(me|status|id|help|logout)$/, async (ctx: BotContext) => {

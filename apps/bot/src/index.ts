@@ -53,15 +53,13 @@ export function createBot(): BotRuntime {
     await next();
   });
 
-  bot.api.config.use(((prev: any) => {
-    return async (method: any, payload: any, signal?: any) => {
-      const result = await prev(method, payload, signal);
-      if (method === 'sendMessage' && result?.message_id && payload?.chat_id) {
-        lastBotMessage.set(Number(payload.chat_id), Number(result.message_id));
-      }
-      return result;
-    };
-  }) as any);
+  bot.api.config.use(async (prev: any, method: any, payload: any, signal?: any) => {
+    const result = await prev(method, payload, signal);
+    if (method === 'sendMessage' && result?.message_id && payload?.chat_id) {
+      lastBotMessage.set(Number(payload.chat_id), Number(result.message_id));
+    }
+    return result;
+  });
 
   bot.command('help', async (ctx) => {
     const text = [
@@ -105,8 +103,8 @@ async function main(): Promise<void> {
     dbPath: config.dbPath,
   });
 
-  const reminders = createRemindersPoller(bot, config.dbPath, { intervalMs: config.pollIntervalMs });
-  const notifications = createNotificationsPoller(bot, config.dbPath, {
+  const reminders = createRemindersPoller(bot, server, config.dbPath, { intervalMs: config.pollIntervalMs });
+  const notifications = createNotificationsPoller(bot, server, config.dbPath, {
     intervalMs: config.pollIntervalMs,
   });
 
@@ -152,4 +150,3 @@ if (import.meta.url === `file:///${process.argv[1]?.replace(/\\/g, '/')}` || pro
   });
 }
 
-import type { Context } from 'grammy';

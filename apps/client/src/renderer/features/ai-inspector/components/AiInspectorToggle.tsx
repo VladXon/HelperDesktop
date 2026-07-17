@@ -1,4 +1,4 @@
-import * as React from 'react';
+import type * as React from 'react';
 import { MagicWand } from '@phosphor-icons/react';
 import { useAiInspector } from '../hooks/useAiInspector';
 

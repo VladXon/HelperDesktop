@@ -49,7 +49,7 @@ export function createApp(): Express {
 
   app.use(
     cors({
-      origin: config.corsOrigins.length > 0 ? config.corsOrigins : isDev ? true : false,
+      origin: config.corsOrigins.length > 0 ? config.corsOrigins : !!isDev,
       credentials: false,
     }),
   );
@@ -136,10 +136,14 @@ async function main(): Promise<void> {
 
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
+
+  gracefulShutdown = () => shutdown('restart');
 }
 
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
+
+export let gracefulShutdown: (() => void) | null = null;
 
 const here = fileURLToPath(import.meta.url);
 const argv1 = process.argv[1] ? resolve(process.argv[1]) : '';

@@ -1,5 +1,6 @@
 export { LoginScreen } from './components/LoginScreen';
 export { PasswordForm } from './components/PasswordForm';
+export { RegisterForm } from './components/RegisterForm';
 export { QrLoginPanel } from './components/QrLoginPanel';
 export { AccountSwitcher } from './components/AccountSwitcher';
 export { PasswordChangeDialog } from './components/PasswordChangeDialog';

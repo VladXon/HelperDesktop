@@ -49,6 +49,7 @@ export class BotManager {
       : ['npx', 'tsx', 'src/index.ts'];
     const env: NodeJS.ProcessEnv = {
       ...process.env,
+      NODE_OPTIONS: '--dns-result-order=ipv4first',
       SERVER_URL: this.opts.serverUrl,
       BOT_MANAGED: '1',
       BOT_AUTOSTART: '1',

@@ -16,3 +16,15 @@ export const botLinkByCodeSchema = z.object({
 export const botUnlinkByTelegramIdSchema = z.object({
   telegramId: z.number().int().positive(),
 });
+
+export const botMarkReminderSentSchema = z.object({
+  ids: z.array(z.number().int().positive()).min(1).max(100),
+});
+
+export const botMarkNotifiedSchema = z.object({
+  ids: z.array(z.number().int().positive()).min(1).max(100),
+});
+
+export const botMarkReadSchema = z.object({
+  id: z.number().int().positive(),
+});

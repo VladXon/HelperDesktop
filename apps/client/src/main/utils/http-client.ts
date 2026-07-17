@@ -1,16 +1,15 @@
 import { app } from 'electron';
-import { promises as fs } from 'node:fs';
 import { join } from 'node:path';
 import { getActiveAccount, readAuthStorage, readDeviceId, writeAuthStorage } from './safe-storage.js';
 import { readJson, writeJson } from './safe-storage.js';
 import type { ServerUrlFile } from './types.js';
 
 const SERVER_URL_FILE = 'server-url.json';
-const DEFAULT_SERVER_URL = 'http://178.172.137.167:3001';
+const DEFAULT_SERVER_URL = 'https://178.172.137.167:3001';
 
 let cachedServerUrl: string | null = null;
 
-function serverUrlPath(): string {
+function _serverUrlPath(): string {
   return join(app.getPath('userData'), SERVER_URL_FILE);
 }
 
@@ -25,7 +24,28 @@ export async function getServerUrl(): Promise<string> {
   return cachedServerUrl;
 }
 
+const ALLOWED_SCHEMES = ['http:', 'https:'];
+
+export class ServerUrlError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ServerUrlError';
+  }
+}
+
 export async function setServerUrl(url: string): Promise<void> {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new ServerUrlError('Invalid URL');
+  }
+  if (!ALLOWED_SCHEMES.includes(parsed.protocol)) {
+    throw new ServerUrlError('Only http and https URLs are allowed');
+  }
+  if (parsed.protocol === 'http:' && !url.startsWith('http://localhost') && !url.startsWith('http://127.0.0.1')) {
+    console.warn(`[helper] Warning: using non-HTTPS URL (${url}). Tokens and passwords sent in plaintext.`);
+  }
   cachedServerUrl = url;
   await writeJson(SERVER_URL_FILE, { url });
 }
@@ -86,7 +106,7 @@ export async function apiFetch<T>(path: string, opts: ApiFetchOptions = {}): Pro
     const acc = await getActiveAccount();
     if (acc) {
       access = acc.accessToken;
-      headers['authorization'] = `Bearer ${access}`;
+      headers.authorization = `Bearer ${access}`;
     }
   }
   if (body !== undefined && !raw) {
@@ -112,7 +132,7 @@ export async function apiFetch<T>(path: string, opts: ApiFetchOptions = {}): Pro
       const refreshed = await refreshToken(acc.refreshToken);
       if (refreshed) {
         await saveRefreshedTokens(refreshed.token, refreshed.refreshToken);
-        headers['authorization'] = `Bearer ${refreshed.token}`;
+        headers.authorization = `Bearer ${refreshed.token}`;
         res = await fetch(url, { ...init, headers });
       } else {
         const storage = await readAuthStorage();

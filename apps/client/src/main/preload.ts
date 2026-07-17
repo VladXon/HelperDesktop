@@ -1,6 +1,16 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 
-const invoke = <T>(channel: string, ...args: unknown[]): Promise<T> => ipcRenderer.invoke(channel, ...args) as Promise<T>;
+const VALID_CHANNEL_RE = /^[a-z]+:[a-z][a-z0-9-]+$/;
+
+const invoke = <T>(channel: string, ...args: unknown[]): Promise<T> => {
+  if (!VALID_CHANNEL_RE.test(channel)) {
+    return Promise.reject(new Error(`Invalid channel: ${channel}`));
+  }
+  if (args.length > 10) {
+    return Promise.reject(new Error(`Too many arguments for channel: ${channel}`));
+  }
+  return ipcRenderer.invoke(channel, ...args) as Promise<T>;
+};
 const on = (channel: string, cb: (...args: unknown[]) => void): (() => void) => {
   const listener = (_e: IpcRendererEvent, ...args: unknown[]): void => cb(...args);
   ipcRenderer.on(channel, listener);
@@ -10,6 +20,7 @@ const on = (channel: string, cb: (...args: unknown[]) => void): (() => void) => 
 const api = {
   auth: {
     login: (login: string, password: string) => invoke<{ token: string; refreshToken: string; expiresIn: number; user: import('@helper/shared').User }>('auth:login', login, password),
+    register: (login: string, password: string, name?: string) => invoke<{ user: import('@helper/shared').User }>('auth:register', login, password, name),
     saveToken: (login: string, tokenData: { token: string; refreshToken: string; expiresIn: number; user: import('@helper/shared').User }) => invoke<void>('auth:save-token', login, tokenData),
     logout: () => invoke<void>('auth:logout'),
     listAccounts: () => invoke<Array<{ login: string; userId: number; isDev: boolean; createdAt: string }>>('auth:list-accounts'),
@@ -42,9 +53,9 @@ const api = {
   },
   telegram: {
     status: () => invoke<import('@helper/shared').TelegramStatus>('telegram:status'),
-    linkCode: () => invoke<{ code: string; expiresIn: number }>('telegram:link-code'),
+    linkCode: () => invoke<{ code: string; deepLink: string; expiresIn: number }>('telegram:link-code'),
     linkCheck: (code: string) => invoke<import('@helper/shared').LinkStatus>('telegram:link-check', code),
-    qrLoginRequest: () => invoke<{ token: string; deepLink: string; expiresIn: number }>('telegram:qr-login-request'),
+    qrLoginRequest: () => invoke<{ token: string; deepLink: string; tgDeepLink: string; expiresIn: number }>('telegram:qr-login-request'),
     qrLoginCheck: (token: string) => invoke<import('@helper/shared').QrLoginStatus>('telegram:qr-login-check', token),
     unlink: () => invoke<void>('telegram:unlink'),
   },
@@ -69,6 +80,9 @@ const api = {
   },
   deepLink: {
     onNote: (cb: (id: number) => void) => on('deep-link:note', (id) => cb(id as number)),
+  },
+  shell: {
+    openExternal: (url: string) => invoke<boolean>('shell:open-external', url),
   },
 };
 

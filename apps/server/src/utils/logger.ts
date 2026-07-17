@@ -65,16 +65,22 @@ function todayKey(d = new Date()): string {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
-export function maskSensitive(input: unknown, keys: Set<string> = SENSITIVE_KEYS): unknown {
+export function maskSensitive(
+  input: unknown,
+  keys: Set<string> = SENSITIVE_KEYS,
+  visited: WeakSet<object> = new WeakSet(),
+): unknown {
   if (input === null || input === undefined) return input;
-  if (Array.isArray(input)) return input.map((v) => maskSensitive(v, keys));
   if (typeof input !== 'object') return input;
+  if (visited.has(input)) return '[Circular]';
+  visited.add(input);
+  if (Array.isArray(input)) return input.map((v) => maskSensitive(v, keys, visited));
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
     if (keys.has(k)) {
       out[k] = '***';
     } else {
-      out[k] = maskSensitive(v, keys);
+      out[k] = maskSensitive(v, keys, visited);
     }
   }
   return out;
@@ -93,7 +99,7 @@ function writeFile(level: Level, line: string): void {
   ensureLogsDir();
   const file = level === 'error' || level === 'fatal' ? 'error' : 'app';
   const path = join(process.cwd(), 'logs', `${file}-${todayKey()}.log`);
-  appendFileSync(path, line + '\n', 'utf8');
+  appendFileSync(path, `${line}\n`, 'utf8');
 }
 
 function formatLine(level: Level, scope: string, message: string, meta?: unknown): string {
@@ -129,9 +135,9 @@ export class Logger {
     if (LEVEL_RANK[level] < this.minRank) return;
     const line = formatLine(level, scope, message, meta);
     if (level === 'error' || level === 'fatal') {
-      process.stderr.write(line + '\n');
+      process.stderr.write(`${line}\n`);
     } else {
-      process.stdout.write(line + '\n');
+      process.stdout.write(`${line}\n`);
     }
     writeFile(level, line);
   }

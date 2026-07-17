@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { join } from 'node:path';
 
 let mainWindow: BrowserWindow | null = null;
@@ -49,6 +49,20 @@ export function registerWindowIpc(): void {
   });
 
   app.setAsDefaultProtocolClient('helperdesktop');
+}
+
+export function registerShellIpc(): void {
+  ipcMain.handle('shell:open-external', async (_e, url: string) => {
+    if (typeof url !== 'string' || !url) return false;
+    try {
+      const parsed = new URL(url);
+      if (!['https:', 'http:', 'tg:'].includes(parsed.protocol)) return false;
+      await shell.openExternal(url);
+      return true;
+    } catch {
+      return false;
+    }
+  });
 }
 
 export function setupDeepLink(getWindow: () => BrowserWindow | null): void {

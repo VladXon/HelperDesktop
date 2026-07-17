@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { opSchema } from '@helper/shared/schemas/dev';
 import { config } from '../config.js';
 import { getDb, schema } from '../db/index.js';
+import { gracefulShutdown } from '../index.js';
 import { requireAuth, requireDev } from '../middleware/auth.js';
 import { HttpError } from '../middleware/error-handler.js';
 import { audit } from '../services/audit.js';
@@ -58,18 +59,16 @@ export function createDevRouter(): Router {
       if (!req.user) throw new HttpError(401, 'unauthorized');
       const db = getDb();
       void audit(db, { action: 'dev_restart', userId: req.user.id, ip: clientIp(req) });
+      try {
+        spawn(process.argv[0] ?? 'node', [process.argv[1] ?? ''], {
+          detached: true,
+          stdio: 'ignore',
+        }).unref();
+      } catch (e) {
+        log.error('restart spawn failed', { error: (e as Error).message });
+      }
       res.json({ ok: true });
-      setTimeout(() => {
-        try {
-          spawn(process.argv[0] ?? 'node', [process.argv[1] ?? ''], {
-            detached: true,
-            stdio: 'ignore',
-          }).unref();
-        } catch (e) {
-          log.error('restart spawn failed', { error: (e as Error).message });
-        }
-        process.exit(0);
-      }, 100);
+      gracefulShutdown?.();
     } catch (e) {
       next(e);
     }

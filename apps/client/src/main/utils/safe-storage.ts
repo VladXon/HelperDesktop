@@ -20,12 +20,12 @@ function encryptionAvailable(): boolean {
 }
 
 function encrypt(value: string): string {
-  if (!encryptionAvailable()) return value;
+  if (!encryptionAvailable()) throw new Error('Encryption is not available on this system');
   try {
     const buf = safeStorage.encryptString(value);
     return ENC_PREFIX + buf.toString('base64');
   } catch {
-    return value;
+    throw new Error('Failed to encrypt data');
   }
 }
 
@@ -58,7 +58,7 @@ export async function writeJson(file: string, data: unknown): Promise<void> {
 
 export async function readAuthStorage(): Promise<AuthStorage> {
   const data = await readJson<AuthStorage>(AUTH_FILE);
-  if (!data || data.version !== 1) {
+  if (data?.version !== 1) {
     return { version: 1, activeAccount: null, accounts: [] };
   }
   const decrypted: AccountInfoLocal[] = [];

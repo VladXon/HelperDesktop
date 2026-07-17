@@ -1,4 +1,4 @@
-import * as React from 'react';
+import type * as React from 'react';
 import { PushPinSimple, Play, PencilSimple, Trash } from '@phosphor-icons/react';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';

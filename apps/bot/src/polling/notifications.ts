@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import type { Bot } from 'grammy';
 import { notificationActions } from '../keyboards.js';
 import { log } from '../logger.js';
+import type { ServerClient } from '../api/server-client.js';
 import type { BotContext } from '../commands/link.js';
 
 export interface NotificationRow {
@@ -21,8 +22,6 @@ const SELECT_NOTIFICATIONS_SQL = `
     AND t.telegram_id IS NOT NULL
 `;
 
-const MARK_NOTIFIED_SQL = `UPDATE notes SET telegram_notified = 1 WHERE id = ?`;
-
 export interface NotificationsPoller {
   tick: () => Promise<number>;
   stop: () => void;
@@ -30,22 +29,18 @@ export interface NotificationsPoller {
 
 export function createNotificationsPoller(
   bot: Bot<BotContext>,
+  server: ServerClient,
   dbPath: string,
   options: { intervalMs: number; onError?: (err: Error) => void } = { intervalMs: 30_000 },
 ): NotificationsPoller {
   const readDb = openReadOnly(dbPath);
-  const writeDb = openWritable(dbPath);
   const select = readDb.prepare<[], NotificationRow>(SELECT_NOTIFICATIONS_SQL);
-  const mark = writeDb.prepare(MARK_NOTIFIED_SQL);
 
   const tick = async (): Promise<number> => {
     const rows = select.all();
     if (rows.length === 0) return 0;
     const ids = rows.map((r) => r.id);
-    const tx = writeDb.transaction((list: number[]) => {
-      for (const id of list) mark.run(id);
-    });
-    tx(ids);
+    await server.markNotified(ids);
     for (const row of rows) {
       const preview = (row.body ?? '').slice(0, 200);
       const text = `${row.title}\n\n${preview}`;
@@ -82,7 +77,7 @@ export function createNotificationsPoller(
       return;
     }
     try {
-      mark.run(id);
+      await server.markRead(id);
       await ctx.answerCallbackQuery({ text: 'Отмечено прочитанным' });
     } catch (e) {
       log.error('note:read failed', { error: (e as Error).message });
@@ -95,7 +90,6 @@ export function createNotificationsPoller(
     stop: () => {
       clearInterval(handle);
       readDb.close();
-      writeDb.close();
     },
   };
 }
@@ -106,14 +100,6 @@ function openReadOnly(path: string): DatabaseType {
     throw new Error(`db not found: ${resolved}`);
   }
   return new Database(resolved, { readonly: true, fileMustExist: true });
-}
-
-function openWritable(path: string): DatabaseType {
-  const resolved = resolveDbPath(path);
-  if (!existsSync(resolved)) {
-    throw new Error(`db not found: ${resolved}`);
-  }
-  return new Database(resolved);
 }
 
 function resolveDbPath(path: string): string {

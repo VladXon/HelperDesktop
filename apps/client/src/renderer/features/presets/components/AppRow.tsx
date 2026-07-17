@@ -1,4 +1,4 @@
-import * as React from 'react';
+import type * as React from 'react';
 import { FolderOpen, X, Lock } from '@phosphor-icons/react';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';

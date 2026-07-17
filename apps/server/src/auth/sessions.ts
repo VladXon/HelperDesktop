@@ -28,10 +28,10 @@ export interface SessionPair {
   expiresAt: string;
 }
 
-export async function createSession(
+export function createSession(
   db: BetterSQLite3Database<any>,
   input: CreateSessionInput,
-): Promise<SessionPair> {
+): SessionPair {
   const user = db.select({ login: users.login }).from(users).where(eq(users.id, input.userId)).all()[0];
   if (!user) throw new Error(`user ${input.userId} not found while creating session`);
 
@@ -69,26 +69,26 @@ export function revokeAllSessionsForUser(db: BetterSQLite3Database<any>, userId:
   db.delete(sessions).where(eq(sessions.userId, userId)).run();
 }
 
-export async function rotateSession(
+export function rotateSession(
   db: BetterSQLite3Database<any>,
   refreshToken: string,
-): Promise<SessionPair | null> {
-  const found = db.select().from(sessions).where(eq(sessions.refreshToken, refreshToken)).all()[0];
+): SessionPair | null {
+  const found = db.select({ id: sessions.id, userId: sessions.userId, deviceId: sessions.deviceId, ip: sessions.ip, userAgent: sessions.userAgent }).from(sessions).where(eq(sessions.refreshToken, refreshToken)).all()[0];
 
   if (!found) {
     return null;
   }
 
-  if (found.refreshTokenUsedAt !== null) {
+  const result = db.update(sessions)
+    .set({ refreshTokenUsedAt: new Date().toISOString() })
+    .where(and(eq(sessions.id, found.id), isNull(sessions.refreshTokenUsedAt)))
+    .run();
+
+  if (result.changes === 0) {
     log.security('token_reuse_detected', { userId: found.userId, sessionId: found.id });
     revokeAllSessionsForUser(db, found.userId);
     return null;
   }
-
-  db.update(sessions)
-    .set({ refreshTokenUsedAt: new Date().toISOString() })
-    .where(eq(sessions.id, found.id))
-    .run();
 
   return createSession(db, {
     userId: found.userId,

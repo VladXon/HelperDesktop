@@ -135,7 +135,7 @@ export function createPresetsRouter(): Router {
         .all()[0];
       if (!existing) throw new HttpError(404, 'not_found');
 
-      const newPinned = !Boolean(existing.pinned);
+      const newPinned = !existing.pinned;
       db.update(schema.presets)
         .set({ pinned: newPinned, updatedAt: new Date().toISOString() })
         .where(eq(schema.presets.id, id))

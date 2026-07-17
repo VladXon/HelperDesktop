@@ -1,4 +1,4 @@
-import * as React from 'react';
+import type * as React from 'react';
 import { CircleNotch, CheckCircle, XCircle } from '@phosphor-icons/react';
 import { useServerHealth } from '../hooks/useServerHealth';
 

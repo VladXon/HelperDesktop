@@ -1,4 +1,4 @@
-import { type Express } from 'express';
+import type { Express } from 'express';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../index.js';

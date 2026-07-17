@@ -1,4 +1,4 @@
-import { Bot } from 'grammy';
+import type { Bot } from 'grammy';
 import { dynamicMainMenu } from '../keyboards.js';
 import { buildMenu } from '../helpers.js';
 import { log } from '../logger.js';

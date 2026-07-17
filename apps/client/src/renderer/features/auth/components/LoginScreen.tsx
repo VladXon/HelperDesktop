@@ -1,9 +1,19 @@
-import * as React from 'react';
+import type * as React from 'react';
+import { useState } from 'react';
+import { Button } from '../../../components/ui/button';
 import { PasswordForm } from './PasswordForm';
+import { RegisterForm } from './RegisterForm';
 import { QrLoginPanel } from './QrLoginPanel';
 import { AccountSwitcher } from './AccountSwitcher';
 
 export function LoginScreen(): React.JSX.Element {
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [registered, setRegistered] = useState(false);
+  const title = mode === 'login' ? 'Вход' : 'Регистрация';
+  const subtitle = mode === 'login'
+    ? 'Введите логин и пароль или используйте Telegram'
+    : 'Создайте новый аккаунт';
+
   return (
     <div className="flex h-screen w-screen bg-bg-primary relative overflow-hidden">
       {/* Atmospheric Orbs */}
@@ -24,25 +34,49 @@ export function LoginScreen(): React.JSX.Element {
             <span className="text-mono-label text-outline-variant">v0.1.0</span>
           </div>
         </div>
-        {/* Right Side: Login Form */}
+        {/* Right Side: Auth Form */}
         <div className="flex-1 flex items-center justify-center p-8 md:p-16 bg-surface/50">
           <div className="w-full max-w-[440px] glass-panel rounded-2xl p-8 sm:p-10 relative overflow-hidden">
             {/* Inner edge highlight */}
             <div className="inner-edge-highlight" />
             <div className="mb-8">
-              <h2 className="text-headline-lg font-bold text-text-primary mb-2">Вход</h2>
-              <p className="text-body-md text-text-muted">
-                Введите логин и пароль или используйте Telegram
-              </p>
+              <h2 className="text-headline-lg font-bold text-text-primary mb-2">{title}</h2>
+              <p className="text-body-md text-text-muted">{subtitle}</p>
             </div>
-            <PasswordForm />
-            <div className="relative flex items-center py-2">
-              <div className="flex-grow h-px bg-white/5" />
-              <span className="flex-shrink-0 mx-4 text-mono-label text-outline uppercase tracking-wider">или</span>
-              <div className="flex-grow h-px bg-white/5" />
-            </div>
-            <QrLoginPanel />
-            <AccountSwitcher />
+            {registered ? (
+              <div className="space-y-6 text-center">
+                <div className="text-sm text-text-secondary">Аккаунт создан! Теперь войдите.</div>
+                <Button
+                  className="w-full py-3.5"
+                  onClick={() => { setMode('login'); setRegistered(false); }}
+                >
+                  Войти
+                </Button>
+              </div>
+            ) : mode === 'login' ? (
+              <>
+                <PasswordForm />
+                <div className="mt-4">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full text-text-muted"
+                    onClick={() => setMode('register')}
+                  >
+                    Нет аккаунта? Зарегистрироваться
+                  </Button>
+                </div>
+                <div className="relative flex items-center py-2 mt-4">
+                  <div className="flex-grow h-px bg-white/5" />
+                  <span className="flex-shrink-0 mx-4 text-mono-label text-outline uppercase tracking-wider">или</span>
+                  <div className="flex-grow h-px bg-white/5" />
+                </div>
+                <QrLoginPanel />
+                <AccountSwitcher />
+              </>
+            ) : (
+              <RegisterForm onSuccess={() => setRegistered(true)} onBackToLogin={() => setMode('login')} />
+            )}
           </div>
         </div>
       </div>

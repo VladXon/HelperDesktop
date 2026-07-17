@@ -131,6 +131,27 @@ export class ServerClient {
     });
   }
 
+  async markReminderSent(ids: number[]): Promise<void> {
+    await this.request('/api/internal/bot/mark-reminder-sent', {
+      method: 'POST',
+      body: { ids },
+    });
+  }
+
+  async markNotified(ids: number[]): Promise<void> {
+    await this.request('/api/internal/bot/mark-notified', {
+      method: 'POST',
+      body: { ids },
+    });
+  }
+
+  async markRead(id: number): Promise<void> {
+    await this.request('/api/internal/bot/mark-read', {
+      method: 'POST',
+      body: { id },
+    });
+  }
+
   async health(): Promise<HealthResult> {
     return this.request<HealthResult>('/api/health', { method: 'GET' });
   }
@@ -180,11 +201,7 @@ export class ServerClient {
       init.body = JSON.stringify(body);
     }
     let response: Response;
-    try {
       response = await this.fetchImpl(url, init);
-    } catch (e) {
-      throw e;
-    }
     const status = response.status;
     const text = await response.text();
     let parsed: unknown = null;

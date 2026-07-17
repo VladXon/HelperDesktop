@@ -1,7 +1,6 @@
-import * as React from 'react';
+import type * as React from 'react';
 import { useMemo, useState } from 'react';
 import { Plus, MagnifyingGlass } from '@phosphor-icons/react';
-import { Input } from '../../../components/ui/input';
 import { Button } from '../../../components/ui/button';
 import { useNotes } from '../hooks/useNotes';
 import { useDeleteNote } from '../hooks/useDeleteNote';
@@ -49,13 +48,9 @@ export function NotesPage(): React.JSX.Element {
         </Button>
       </div>
       {!isLoading && filtered.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center p-6 md:p-8">
-          <div className="glass-panel rounded-2xl p-12 flex flex-col items-center justify-center text-center max-w-md w-full relative overflow-hidden group">
-            <div className="inner-edge-highlight" />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-accent/10 rounded-full blur-2xl opacity-50 group-hover:opacity-100 transition-opacity duration-700" />
-            <span className="text-6xl text-accent/40 mb-6 font-light">+</span>
-            <p className="text-body-md text-text-muted opacity-70">Нет заметок. Создайте первую.</p>
-          </div>
+        <div className="flex-1 flex flex-col items-center justify-center text-center">
+          <span className="text-6xl text-accent/20 mb-6 font-light select-none">+</span>
+          <p className="text-body-md text-text-muted opacity-50">Нет заметок. Создайте первую.</p>
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto p-6 md:p-8">

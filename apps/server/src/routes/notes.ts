@@ -146,7 +146,7 @@ export function createNotesRouter(): Router {
         .all()[0];
       if (!existing) throw new HttpError(404, 'not_found');
 
-      const current = Boolean((existing as Record<string, unknown>)[parsed.data.field]);
+      const current = Boolean(existing[parsed.data.field]);
       db.update(schema.notes)
         .set({ [parsed.data.field]: !current, updatedAt: new Date().toISOString() })
         .where(eq(schema.notes.id, id))

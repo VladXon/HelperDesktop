@@ -31,9 +31,9 @@ if not exist "apps\server\helperdesktop.db" (
 
 echo Starting HelperDesktop in DEV mode...
 echo.
-echo Server: tsx watch port 3001
 echo Client: Vite on http://localhost:5173
-echo Bot:    managed by server
+echo Server: VPS (178.172.137.167:3001)
+echo Bot:    on VPS
 echo.
 
 start "HelperDesktop Dev" cmd /k "cd /d %~dp0 && pnpm dev"

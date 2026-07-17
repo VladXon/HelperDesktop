@@ -1,7 +1,6 @@
-import * as React from 'react';
+import type * as React from 'react';
 import { useMemo, useState } from 'react';
 import { Plus, MagnifyingGlass } from '@phosphor-icons/react';
-import { Input } from '../../../components/ui/input';
 import { Button } from '../../../components/ui/button';
 import { usePresets } from '../hooks/usePresets';
 import { useDeletePreset } from '../hooks/useDeletePreset';

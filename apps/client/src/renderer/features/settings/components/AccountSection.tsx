@@ -1,4 +1,4 @@
-import * as React from 'react';
+import type * as React from 'react';
 import { useState } from 'react';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
@@ -29,8 +29,8 @@ export function AccountSection(): React.JSX.Element {
         <Input value={user?.name ?? ''} disabled className="bg-surface-container-low/50" />
       </div>
       <div className="flex gap-4 pt-2">
-        <Button variant="outline" className="px-5 py-3" onClick={() => setPwOpen(true)}>Сменить пароль</Button>
-        <Button variant="outline" className="px-5 py-3" onClick={() => setEmailOpen(true)}>Сменить email</Button>
+        <Button variant="secondary" onClick={() => setPwOpen(true)}>Сменить пароль</Button>
+        <Button variant="secondary" onClick={() => setEmailOpen(true)}>Сменить email</Button>
       </div>
       <PasswordChangeDialog open={pwOpen} onOpenChange={setPwOpen} />
       <EmailChangeDialog open={emailOpen} onOpenChange={setEmailOpen} />

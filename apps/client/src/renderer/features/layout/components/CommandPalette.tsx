@@ -49,7 +49,10 @@ export function CommandPalette(): React.JSX.Element {
 
   return (
     <Dialog open={isCommandPaletteOpen} onOpenChange={(v) => { if (!v) closeCommandPalette(); }}>
-      <DialogContent className="max-w-xl p-0 overflow-hidden">
+      <DialogContent
+        hideClose
+        className="top-1/4 translate-y-0 max-w-md p-0 overflow-hidden gap-0 backdrop-blur-none border-border bg-bg-secondary shadow-[0_16px_48px_rgba(0,0,0,0.5)]"
+      >
         <DialogTitle className="sr-only">Командная палитра</DialogTitle>
         <Command>
           <CommandInput placeholder="Введите команду..." />

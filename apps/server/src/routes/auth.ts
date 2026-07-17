@@ -126,22 +126,10 @@ export function createAuthRouter(): Router {
         throw new HttpError(429, 'too_many_requests', 'Account locked');
       }
 
-      let u = db.select().from(schema.users).where(eq(schema.users.login, login)).all()[0];
+      const u = db.select().from(schema.users).where(eq(schema.users.login, login)).all()[0];
 
-      if (!u) {
-        if (!/^[a-zA-Z0-9_-]{3,64}$/.test(login)) {
-          throw new HttpError(400, 'bad_request', 'Login must be 3-64 chars: letters, digits, underscore, dash');
-        }
-        const hashed = await hashPassword(password);
-        const [created] = db
-          .insert(schema.users)
-          .values({ login, password: hashed, name: login })
-          .returning()
-          .all();
-        if (!created) throw new HttpError(500, 'internal_error');
-        u = created;
-      } else if (!(await verifyPassword(password, u.password))) {
-        await audit(db, { action: 'login_failed', userId: u.id, ip, metadata: { login } });
+      if (!u || !(await verifyPassword(password, u.password))) {
+        await audit(db, { action: 'login_failed', userId: u?.id, ip, metadata: { login } });
         recordLoginAttempt(db, { ip, login, success: false });
         throw new HttpError(401, 'unauthorized', INVALID_CREDS_MSG);
       }
@@ -166,7 +154,7 @@ export function createAuthRouter(): Router {
     }
   });
 
-  router.post('/refresh', async (req: Request, res: Response, next: NextFunction) => {
+  router.post('/refresh', authPerMinLimit, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const parsed = refreshSchema.safeParse(req.body);
       if (!parsed.success) {

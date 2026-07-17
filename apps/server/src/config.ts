@@ -51,7 +51,7 @@ const envSchema = z
       warnings.push('JWT_SECRET not set; generated ephemeral secret for dev');
     }
 
-    let botSharedSecret = env.BOT_SHARED_SECRET;
+    const botSharedSecret = env.BOT_SHARED_SECRET;
     if (isProd && !botSharedSecret) {
       throw new Error('BOT_SHARED_SECRET is required in production');
     }

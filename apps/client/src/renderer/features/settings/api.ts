@@ -40,7 +40,7 @@ export async function telegramStatus(): Promise<{ linked: boolean; telegramId?: 
   return window.api.telegram.status();
 }
 
-export async function telegramLinkCode(): Promise<{ code: string; expiresIn: number }> {
+export async function telegramLinkCode(): Promise<{ code: string; deepLink: string; expiresIn: number }> {
   return window.api.telegram.linkCode();
 }
 

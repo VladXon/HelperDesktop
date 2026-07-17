@@ -1,4 +1,4 @@
-import * as React from 'react';
+import type * as React from 'react';
 import { useState } from 'react';
 import { loginBodySchema } from '@helper/shared';
 import { Button } from '../../../components/ui/button';
@@ -65,9 +65,6 @@ export function PasswordForm(): React.JSX.Element {
           {mutation.isPending ? 'Вход...' : 'Войти'}
         </Button>
       </div>
-      <p className="text-body-md text-[13px] leading-tight text-text-muted/70 text-center">
-        Если аккаунт не существует, он будет создан автоматически.
-      </p>
     </form>
   );
 }
