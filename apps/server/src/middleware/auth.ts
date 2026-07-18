@@ -9,26 +9,27 @@ import { HttpError } from './error-handler.js';
 
 export type AuthedUser = User;
 
-function loadUser(userId: number): AuthedUser | null {
-  const row = getDb().select().from(schema.users).where(eq(schema.users.id, userId)).all()[0];
+async function loadUser(userId: number): Promise<AuthedUser | null> {
+  const rows = await getDb().select().from(schema.users).where(eq(schema.users.id, userId));
+  const row = rows[0];
   if (!row) return null;
   return { ...row, isDev: Boolean(row.isDev) } as AuthedUser;
 }
 
-function sessionExists(token: string): boolean {
-  const row = getDb()
+async function sessionExists(token: string): Promise<boolean> {
+  const rows = await getDb()
     .select({ id: schema.sessions.id })
     .from(schema.sessions)
-    .where(eq(schema.sessions.token, token))
-    .all()[0];
+    .where(eq(schema.sessions.token, token));
+  const row = rows[0];
   return Boolean(row);
 }
 
-export function requireAuth(
+export async function requireAuth(
   req: Request,
   _res: Response,
   next: NextFunction,
-): void {
+): Promise<void> {
   try {
     const auth = req.headers.authorization;
     if (typeof auth === 'string' && auth.startsWith('Bearer ')) {
@@ -38,11 +39,11 @@ export function requireAuth(
         log.security('auth_failed', { reason: 'bad_token', ip: req.ip });
         throw new HttpError(401, 'unauthorized', 'Invalid credentials');
       }
-      if (!sessionExists(token)) {
+      if (!await sessionExists(token)) {
         log.security('auth_failed', { reason: 'session_revoked', userId: payload.userId, ip: req.ip });
         throw new HttpError(401, 'unauthorized', 'Invalid credentials');
       }
-      const user = loadUser(payload.userId);
+      const user = await loadUser(payload.userId);
       if (!user) {
         log.security('auth_failed', { reason: 'user_missing', userId: payload.userId, ip: req.ip });
         throw new HttpError(401, 'unauthorized', 'Invalid credentials');

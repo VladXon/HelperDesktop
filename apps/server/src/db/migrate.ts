@@ -1,8 +1,7 @@
-import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
-import { createDb } from './index.js';
-import { log } from '../utils/logger.js';
+import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { db, pool } from './index.js';
 
-const { db } = createDb();
-
-migrate(db, { migrationsFolder: './src/db/migrations' });
-log.db('migrations applied');
+export async function runMigrations(): Promise<void> {
+  await migrate(db, { migrationsFolder: new URL('./migrations', import.meta.url).pathname });
+  await pool.end();
+}

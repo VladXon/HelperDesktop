@@ -1,5 +1,5 @@
 import { Router, type NextFunction, type Request, type Response } from 'express';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import {
   botLinkByCodeSchema,
   botMarkNotifiedSchema,
@@ -26,14 +26,14 @@ export function createInternalRouter(): Router {
   const router = Router();
   router.use(requireBotSecret);
 
-  router.post('/link-by-code', (req: Request, res: Response, next: NextFunction) => {
+  router.post('/link-by-code', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const parsed = botLinkByCodeSchema.safeParse(req.body);
       if (!parsed.success) throw new HttpError(400, 'bad_request', 'Invalid input');
       const { code, telegramId } = parsed.data;
       const db = getDb();
 
-      const action = db
+      const actions = await db
         .select()
         .from(schema.telegramActions)
         .where(
@@ -41,8 +41,8 @@ export function createInternalRouter(): Router {
             eq(schema.telegramActions.action, 'link_code'),
             eq(schema.telegramActions.token, code),
           ),
-        )
-        .get();
+        );
+      const action = actions[0];
 
       if (!action) throw new HttpError(404, 'not_found', 'Code not found');
       if (isExpired(action.expiresAt)) throw new HttpError(410, 'gone', 'Code expired');
@@ -50,35 +50,30 @@ export function createInternalRouter(): Router {
       if (action.userId === null) throw new HttpError(400, 'bad_request', 'Code has no user');
 
       const userId = action.userId;
-      const existingByTg = db
+      const [existingByTg] = await db
         .select()
         .from(schema.telegramLinks)
-        .where(eq(schema.telegramLinks.telegramId, telegramId))
-        .all()[0];
+        .where(eq(schema.telegramLinks.telegramId, telegramId));
       if (existingByTg) {
         throw new HttpError(409, 'conflict', 'Telegram account already linked to another user');
       }
-      const existingByUser = db
+      const [existingByUser] = await db
         .select()
         .from(schema.telegramLinks)
-        .where(eq(schema.telegramLinks.userId, userId))
-        .all()[0];
+        .where(eq(schema.telegramLinks.userId, userId));
       if (existingByUser) {
-        db.delete(schema.telegramLinks)
-          .where(eq(schema.telegramLinks.userId, userId))
-          .run();
+        await db.delete(schema.telegramLinks)
+          .where(eq(schema.telegramLinks.userId, userId));
       }
 
-      db.insert(schema.telegramLinks)
-        .values({ userId, telegramId, linkedAt: new Date().toISOString() })
-        .run();
+      await db.insert(schema.telegramLinks)
+        .values({ userId, telegramId, linkedAt: new Date().toISOString() });
 
-      db.update(schema.telegramActions)
+      await db.update(schema.telegramActions)
         .set({ status: 'approved', telegramId })
-        .where(eq(schema.telegramActions.token, code))
-        .run();
+        .where(eq(schema.telegramActions.token, code));
 
-      const userRow = db.select().from(schema.users).where(eq(schema.users.id, userId)).all()[0];
+      const [userRow] = await db.select().from(schema.users).where(eq(schema.users.id, userId));
       void audit(db, { action: 'telegram_link', userId, metadata: { via: 'code' } });
       res.json({ user_id: userId, login: userRow?.login ?? '' });
     } catch (e) {
@@ -86,7 +81,7 @@ export function createInternalRouter(): Router {
     }
   });
 
-  router.get('/user-by-telegram-id', (req: Request, res: Response, next: NextFunction) => {
+  router.get('/user-by-telegram-id', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const tgRaw = req.query.telegramId;
       const telegramId = typeof tgRaw === 'string' ? Number.parseInt(tgRaw, 10) : NaN;
@@ -94,17 +89,15 @@ export function createInternalRouter(): Router {
         throw new HttpError(400, 'bad_request', 'Invalid telegramId');
       }
       const db = getDb();
-      const link = db
+      const [link] = await db
         .select()
         .from(schema.telegramLinks)
-        .where(eq(schema.telegramLinks.telegramId, telegramId))
-        .all()[0];
+        .where(eq(schema.telegramLinks.telegramId, telegramId));
       if (!link) throw new HttpError(404, 'not_found');
-      const userRow = db
+      const [userRow] = await db
         .select()
         .from(schema.users)
-        .where(eq(schema.users.id, link.userId))
-        .all()[0];
+        .where(eq(schema.users.id, link.userId));
       if (!userRow) throw new HttpError(404, 'not_found');
       res.json({ user_id: userRow.id, login: userRow.login, is_dev: Boolean(userRow.isDev) });
     } catch (e) {
@@ -119,7 +112,7 @@ export function createInternalRouter(): Router {
       const { token, telegramId } = parsed.data;
       const db = getDb();
 
-      const action = db
+      const [action] = await db
         .select()
         .from(schema.telegramActions)
         .where(
@@ -127,19 +120,17 @@ export function createInternalRouter(): Router {
             eq(schema.telegramActions.token, token),
             eq(schema.telegramActions.action, 'qr_login'),
           ),
-        )
-        .all()[0];
+        );
       if (!action) throw new HttpError(404, 'not_found', 'Token not found');
       if (isExpired(action.expiresAt)) throw new HttpError(410, 'gone', 'Token expired');
       if (action.status !== 'pending') {
         throw new HttpError(409, 'conflict', 'Token already used');
       }
 
-      const link = db
+      const [link] = await db
         .select()
         .from(schema.telegramLinks)
-        .where(eq(schema.telegramLinks.telegramId, telegramId))
-        .all()[0];
+        .where(eq(schema.telegramLinks.telegramId, telegramId));
       if (!link) throw new HttpError(404, 'not_found', 'Telegram account not linked');
 
       const sess = await createSession(db, {
@@ -150,10 +141,9 @@ export function createInternalRouter(): Router {
       });
       const expiresIn = Math.floor((new Date(sess.expiresAt).getTime() - Date.now()) / 1000);
 
-      db.update(schema.telegramActions)
+      await db.update(schema.telegramActions)
         .set({ status: 'approved', telegramId, userId: link.userId })
-        .where(eq(schema.telegramActions.token, token))
-        .run();
+        .where(eq(schema.telegramActions.token, token));
 
       void audit(db, { action: 'bot_login_approved', userId: link.userId, metadata: { telegramId } });
       res.json({
@@ -168,24 +158,22 @@ export function createInternalRouter(): Router {
     }
   });
 
-  router.post('/unlink-by-telegram-id', (req: Request, res: Response, next: NextFunction) => {
+  router.post('/unlink-by-telegram-id', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const parsed = botUnlinkByTelegramIdSchema.safeParse(req.body);
       if (!parsed.success) throw new HttpError(400, 'bad_request', 'Invalid input');
       const { telegramId } = parsed.data;
       const db = getDb();
-      const link = db
+      const [link] = await db
         .select()
         .from(schema.telegramLinks)
-        .where(eq(schema.telegramLinks.telegramId, telegramId))
-        .all()[0];
+        .where(eq(schema.telegramLinks.telegramId, telegramId));
       if (!link) {
         res.json({ ok: true });
         return;
       }
-      db.delete(schema.telegramLinks)
-        .where(eq(schema.telegramLinks.telegramId, telegramId))
-        .run();
+      await db.delete(schema.telegramLinks)
+        .where(eq(schema.telegramLinks.telegramId, telegramId));
       void audit(db, {
         action: 'telegram_unlink',
         userId: link.userId,
@@ -197,48 +185,97 @@ export function createInternalRouter(): Router {
     }
   });
 
-  router.post('/mark-reminder-sent', (req: Request, res: Response, next: NextFunction) => {
+  router.post('/mark-reminder-sent', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const parsed = botMarkReminderSentSchema.safeParse(req.body);
       if (!parsed.success) throw new HttpError(400, 'bad_request', 'Invalid input');
       const { ids } = parsed.data;
       const db = getDb();
-      db.update(schema.notes)
+      await db.update(schema.notes)
         .set({ reminderAt: null })
-        .where(inArray(schema.notes.id, ids))
-        .run();
+        .where(inArray(schema.notes.id, ids));
       res.json({ ok: true });
     } catch (e) {
       next(e);
     }
   });
 
-  router.post('/mark-notified', (req: Request, res: Response, next: NextFunction) => {
+  router.post('/mark-notified', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const parsed = botMarkNotifiedSchema.safeParse(req.body);
       if (!parsed.success) throw new HttpError(400, 'bad_request', 'Invalid input');
       const { ids } = parsed.data;
       const db = getDb();
-      db.update(schema.notes)
+      await db.update(schema.notes)
         .set({ telegramNotified: true })
-        .where(inArray(schema.notes.id, ids))
-        .run();
+        .where(inArray(schema.notes.id, ids));
       res.json({ ok: true });
     } catch (e) {
       next(e);
     }
   });
 
-  router.post('/mark-read', (req: Request, res: Response, next: NextFunction) => {
+  router.get('/pending-notifications', async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const db = getDb();
+      const rows = await db
+        .select({
+          id: schema.notes.id,
+          title: schema.notes.title,
+          body: schema.notes.body,
+          telegramId: schema.telegramLinks.telegramId,
+        })
+        .from(schema.notes)
+        .innerJoin(schema.telegramLinks, eq(schema.telegramLinks.userId, schema.notes.userId))
+        .where(
+          and(
+            eq(schema.notes.notifyTelegram, true),
+            eq(schema.notes.telegramNotified, false),
+          ),
+        );
+      res.json({ rows });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  router.get('/pending-reminders', async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const db = getDb();
+      const now = Math.floor(Date.now() / 1000);
+      const rows = await db
+        .select({
+          id: schema.notes.id,
+          title: schema.notes.title,
+          body: schema.notes.body,
+          telegramId: schema.telegramLinks.telegramId,
+        })
+        .from(schema.notes)
+        .innerJoin(schema.telegramLinks, eq(schema.telegramLinks.userId, schema.notes.userId))
+        .where(
+          and(
+            eq(schema.notes.completed, false),
+            and(
+              sql`reminder_at IS NOT NULL`,
+              sql`reminder_at <= ${now}`,
+            ),
+          ),
+        );
+      res.json({ rows });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  router.post('/mark-read', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const parsed = botMarkReadSchema.safeParse(req.body);
       if (!parsed.success) throw new HttpError(400, 'bad_request', 'Invalid input');
       const { id } = parsed.data;
       const db = getDb();
-      db.update(schema.notes)
+      await db.update(schema.notes)
         .set({ telegramNotified: true })
-        .where(eq(schema.notes.id, id))
-        .run();
+        .where(eq(schema.notes.id, id));
       res.json({ ok: true });
     } catch (e) {
       next(e);

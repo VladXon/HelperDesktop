@@ -63,6 +63,7 @@ const api = {
     getUrl: () => invoke<string>('server:get-url'),
     setUrl: (url: string) => invoke<void>('server:set-url', url),
     test: () => invoke<{ status: string; timestamp: string; version: string; db: string }>('server:test'),
+    checkUrl: (url: string) => invoke<{ status: 'online' | 'offline' }>('server:check-url', url),
     onHealth: (cb: (status: unknown) => void) => on('server:health', cb),
     devServerInfo: () => invoke<{ uptime: number; memory: { rss: number; heapTotal: number; heapUsed: number; external: number }; version: string; nodeEnv: string; users_count: number; sessions_count: number; notes_count: number; presets_count: number; telegram_links_count: number }>('server:dev-serverinfo'),
     devRestart: () => invoke<void>('server:dev-restart'),

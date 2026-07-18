@@ -145,6 +145,14 @@ export class ServerClient {
     });
   }
 
+  async getPendingNotifications(): Promise<{ rows: Array<{ id: number; title: string; body: string; telegramId: number }> }> {
+    return this.request('/api/internal/bot/pending-notifications', { method: 'GET' });
+  }
+
+  async getPendingReminders(): Promise<{ rows: Array<{ id: number; title: string; body: string; telegramId: number }> }> {
+    return this.request('/api/internal/bot/pending-reminders', { method: 'GET' });
+  }
+
   async markRead(id: number): Promise<void> {
     await this.request('/api/internal/bot/mark-read', {
       method: 'POST',

@@ -31,6 +31,7 @@ const envSchema = z
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
     PORT: z.coerce.number().int().positive().default(3001),
     LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
+    DATABASE_URL: z.string().default(''),
     DB_PATH: z.string().min(1).default('./helperdesktop.db'),
     BOT_PATH: z.string().min(1).default('../bot'),
     BOT_USERNAME: z.string().default(''),

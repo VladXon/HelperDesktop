@@ -39,7 +39,7 @@ export function Titlebar(): React.JSX.Element {
       </div>
       <div className="app-no-drag flex items-center gap-3">
         {import.meta.env.DEV ? <AiInspectorToggle /> : null}
-        <ServerStatusBadge onClick={() => navigate({ page: 'settings' })} />
+        <ServerStatusBadge />
         <UserMenu />
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" onClick={() => window.api.window.minimize()} title="Свернуть">

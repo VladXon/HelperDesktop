@@ -17,11 +17,33 @@ pnpm backup          # SQLite .backup with 30d retention (via scripts/backup.sh)
 - `pm2 start config/ecosystem.config.cjs`
 - Deploy: `git pull && pnpm install && pnpm --filter server build && pnpm --filter bot build && pm2 restart all`
 
-## VPS Server
-- Host: 178.172.137.167
+## VPS Servers
+
+### Сервер 1 — Belarus (178.172.137.167)
 - OS: Ubuntu 24.04 LTS
-- User: root (key-based auth, local ed25519 key)
-- Uses: server hosting, bot hosting
+- User: root (key-based auth)
+- Config: 2 vCPU / 4GB RAM / 50GB SSD
+- Type: KVM
+
+### Сервер 2 — Germany (2.26.80.138)
+- Domain: verbal-ivory-buzzard.play2go.cloud
+- OS: Ubuntu 22.04
+- User: root (key-based auth)
+- Config: 1 vCPU / 4GB RAM / 10GB
+- Type: KVM
+
+### Selection
+
+```bash
+# Default (Сервер 1)
+./scripts/deploy.sh
+
+# Specify by name
+VPS=server2 ./scripts/deploy.sh
+
+# Or by direct remote
+REMOTE=root@2.26.80.138 ./scripts/deploy.sh
+```
 
 ## Git Rules
 - Push to GitHub (`origin`), NOT to VPS. VPS pulls from GitHub.

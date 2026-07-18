@@ -40,30 +40,29 @@ export function createNotesRouter(): Router {
   const router = Router();
   router.use(requireAuth);
 
-  router.get('/', (req: Request, res: Response, next: NextFunction) => {
+  router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.user) throw new HttpError(401, 'unauthorized');
       const db = getDb();
-      const rows = db
+      const rows = await db
         .select()
         .from(schema.notes)
         .where(eq(schema.notes.userId, req.user.id))
-        .orderBy(desc(schema.notes.pinned), desc(schema.notes.createdAt))
-        .all();
+        .orderBy(desc(schema.notes.pinned), desc(schema.notes.createdAt));
       res.json({ notes: rows.map(rowToNote) });
     } catch (e) {
       next(e);
     }
   });
 
-  router.post('/', (req: Request, res: Response, next: NextFunction) => {
+  router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.user) throw new HttpError(401, 'unauthorized');
       const parsed = noteCreateSchema.safeParse(req.body);
       if (!parsed.success) throw new HttpError(400, 'bad_request', 'Invalid input');
       const { title, body, tags, reminderAt, notifyTelegram } = parsed.data;
       const db = getDb();
-      const [row] = db
+      const [row] = await db
         .insert(schema.notes)
         .values({
           userId: req.user.id,
@@ -73,8 +72,7 @@ export function createNotesRouter(): Router {
           reminderAt,
           notifyTelegram,
         })
-        .returning()
-        .all();
+        .returning();
       if (!row) throw new HttpError(500, 'internal_error');
       res.status(201).json({ note: rowToNote(row) });
     } catch (e) {
@@ -82,18 +80,17 @@ export function createNotesRouter(): Router {
     }
   });
 
-  router.put('/:id', (req: Request, res: Response, next: NextFunction) => {
+  router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.user) throw new HttpError(401, 'unauthorized');
       const id = parseId(req.params.id ?? '');
       const parsed = noteUpdateSchema.safeParse(req.body);
       if (!parsed.success) throw new HttpError(400, 'bad_request', 'Invalid input');
       const db = getDb();
-      const existing = db
+      const [existing] = await db
         .select()
         .from(schema.notes)
-        .where(and(eq(schema.notes.id, id), eq(schema.notes.userId, req.user.id)))
-        .all()[0];
+        .where(and(eq(schema.notes.id, id), eq(schema.notes.userId, req.user.id)));
       if (!existing) throw new HttpError(404, 'not_found');
 
       const update: Record<string, unknown> = { updatedAt: new Date().toISOString() };
@@ -109,53 +106,50 @@ export function createNotesRouter(): Router {
       if (data.pinned !== undefined) update.pinned = data.pinned;
       if (data.completed !== undefined) update.completed = data.completed;
 
-      db.update(schema.notes).set(update).where(eq(schema.notes.id, id)).run();
-      const updated = db.select().from(schema.notes).where(eq(schema.notes.id, id)).all()[0]!;
-      res.json({ note: rowToNote(updated) });
+      await db.update(schema.notes).set(update).where(eq(schema.notes.id, id));
+      const [updated] = await db.select().from(schema.notes).where(eq(schema.notes.id, id));
+      res.json({ note: rowToNote(updated!) });
     } catch (e) {
       next(e);
     }
   });
 
-  router.delete('/:id', (req: Request, res: Response, next: NextFunction) => {
+  router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.user) throw new HttpError(401, 'unauthorized');
       const id = parseId(req.params.id ?? '');
       const db = getDb();
-      const existing = db
+      const [existing] = await db
         .select()
         .from(schema.notes)
-        .where(and(eq(schema.notes.id, id), eq(schema.notes.userId, req.user.id)))
-        .all()[0];
+        .where(and(eq(schema.notes.id, id), eq(schema.notes.userId, req.user.id)));
       if (!existing) throw new HttpError(404, 'not_found');
-      db.delete(schema.notes).where(eq(schema.notes.id, id)).run();
+      await db.delete(schema.notes).where(eq(schema.notes.id, id));
       res.json({ ok: true });
     } catch (e) {
       next(e);
     }
   });
 
-  router.patch('/:id/toggle', (req: Request, res: Response, next: NextFunction) => {
+  router.patch('/:id/toggle', async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.user) throw new HttpError(401, 'unauthorized');
       const id = parseId(req.params.id ?? '');
       const parsed = noteToggleSchema.safeParse(req.body);
       if (!parsed.success) throw new HttpError(400, 'bad_request', 'Invalid input');
       const db = getDb();
-      const existing = db
+      const [existing] = await db
         .select()
         .from(schema.notes)
-        .where(and(eq(schema.notes.id, id), eq(schema.notes.userId, req.user.id)))
-        .all()[0];
+        .where(and(eq(schema.notes.id, id), eq(schema.notes.userId, req.user.id)));
       if (!existing) throw new HttpError(404, 'not_found');
 
       const current = Boolean(existing[parsed.data.field]);
-      db.update(schema.notes)
+      await db.update(schema.notes)
         .set({ [parsed.data.field]: !current, updatedAt: new Date().toISOString() })
-        .where(eq(schema.notes.id, id))
-        .run();
-      const updated = db.select().from(schema.notes).where(eq(schema.notes.id, id)).all()[0]!;
-      res.json({ note: rowToNote(updated) });
+        .where(eq(schema.notes.id, id));
+      const [updated] = await db.select().from(schema.notes).where(eq(schema.notes.id, id));
+      res.json({ note: rowToNote(updated!) });
     } catch (e) {
       next(e);
     }

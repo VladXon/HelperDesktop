@@ -50,31 +50,30 @@ export function createAuthRouter(): Router {
       }
       const { login, password, name } = parsed.data;
       const db = getDb();
-      const existing = db.select().from(schema.users).where(eq(schema.users.login, login)).all()[0];
+      const [existing] = await db.select().from(schema.users).where(eq(schema.users.login, login));
 
       if (existing) {
         if (!(await verifyPassword(password, existing.password))) {
           await audit(db, { action: 'login_failed', userId: existing.id, ip: clientIp(req) });
-          recordLoginAttempt(db, { ip: clientIp(req), login, success: false });
+          await recordLoginAttempt(db, { ip: clientIp(req), login, success: false });
           throw new HttpError(401, 'unauthorized', INVALID_CREDS_MSG);
         }
         await audit(db, { action: 'login', userId: existing.id, ip: clientIp(req) });
-        recordLoginAttempt(db, { ip: clientIp(req), login, success: true });
-        clearFailedAttempts(db, clientIp(req), login);
+        await recordLoginAttempt(db, { ip: clientIp(req), login, success: true });
+        await clearFailedAttempts(db, clientIp(req), login);
         res.status(200).json({ user: toPublicUser(existing) });
         return;
       }
 
       const hashed = await hashPassword(password);
-      const [u] = db
+      const [u] = await db
         .insert(schema.users)
         .values({ login, password: hashed, name: name ?? '' })
-        .returning()
-        .all();
+        .returning();
       if (!u) throw new HttpError(500, 'internal_error');
 
       await audit(db, { action: 'login', userId: u.id, ip: clientIp(req) });
-      recordLoginAttempt(db, { ip: clientIp(req), login, success: true });
+      await recordLoginAttempt(db, { ip: clientIp(req), login, success: true });
       res.status(201).json({ user: toPublicUser(u) });
     } catch (e) {
       next(e);
@@ -91,21 +90,21 @@ export function createAuthRouter(): Router {
       const db = getDb();
       const ip = clientIp(req);
 
-      if (isLockedOut(db, ip, login)) {
+      if (await isLockedOut(db, ip, login)) {
         await audit(db, { action: 'account_locked', ip, metadata: { login } });
         throw new HttpError(429, 'too_many_requests', 'Account locked');
       }
 
-      const u = db.select().from(schema.users).where(eq(schema.users.login, login)).all()[0];
+      const [u] = await db.select().from(schema.users).where(eq(schema.users.login, login));
       if (!u || !(await verifyPassword(password, u.password))) {
         await audit(db, { action: 'login_failed', userId: u?.id, ip, metadata: { login } });
-        recordLoginAttempt(db, { ip, login, success: false });
+        await recordLoginAttempt(db, { ip, login, success: false });
         throw new HttpError(401, 'unauthorized', INVALID_CREDS_MSG);
       }
 
       await audit(db, { action: 'login', userId: u.id, ip });
-      recordLoginAttempt(db, { ip, login, success: true });
-      clearFailedAttempts(db, ip, login);
+      await recordLoginAttempt(db, { ip, login, success: true });
+      await clearFailedAttempts(db, ip, login);
       res.json({ user: toPublicUser(u) });
     } catch (e) {
       next(e);
@@ -122,15 +121,15 @@ export function createAuthRouter(): Router {
       const db = getDb();
       const ip = clientIp(req);
 
-      if (isLockedOut(db, ip, login)) {
+      if (await isLockedOut(db, ip, login)) {
         throw new HttpError(429, 'too_many_requests', 'Account locked');
       }
 
-      const u = db.select().from(schema.users).where(eq(schema.users.login, login)).all()[0];
+      const [u] = await db.select().from(schema.users).where(eq(schema.users.login, login));
 
       if (!u || !(await verifyPassword(password, u.password))) {
         await audit(db, { action: 'login_failed', userId: u?.id, ip, metadata: { login } });
-        recordLoginAttempt(db, { ip, login, success: false });
+        await recordLoginAttempt(db, { ip, login, success: false });
         throw new HttpError(401, 'unauthorized', INVALID_CREDS_MSG);
       }
 
@@ -141,8 +140,8 @@ export function createAuthRouter(): Router {
         userAgent: req.headers['user-agent'] ?? null,
       });
       await audit(db, { action: 'login', userId: u.id, ip });
-      recordLoginAttempt(db, { ip, login, success: true });
-      clearFailedAttempts(db, ip, login);
+      await recordLoginAttempt(db, { ip, login, success: true });
+      await clearFailedAttempts(db, ip, login);
       res.json({
         token: sess.token,
         refreshToken: sess.refreshToken,
@@ -175,13 +174,13 @@ export function createAuthRouter(): Router {
     }
   });
 
-  router.post('/logout', requireAuth, (req: Request, res: Response, next: NextFunction) => {
+  router.post('/logout', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const auth = req.headers.authorization;
       if (typeof auth === 'string' && auth.startsWith('Bearer ')) {
         const token = auth.slice('Bearer '.length).trim();
         const db = getDb();
-        revokeSession(db, token);
+        await revokeSession(db, token);
         if (req.user) {
           void audit(db, { action: 'logout', userId: req.user.id, ip: clientIp(req) });
         }
@@ -206,14 +205,14 @@ export function createAuthRouter(): Router {
       }
       const { email, currentPassword } = parsed.data;
       const db = getDb();
-      const u = db.select().from(schema.users).where(eq(schema.users.id, req.user.id)).all()[0];
+      const [u] = await db.select().from(schema.users).where(eq(schema.users.id, req.user.id));
       if (!u || !(await verifyPassword(currentPassword, u.password))) {
         throw new HttpError(401, 'unauthorized', INVALID_CREDS_MSG);
       }
-      db.update(schema.users).set({ email }).where(eq(schema.users.id, u.id)).run();
+      await db.update(schema.users).set({ email }).where(eq(schema.users.id, u.id));
       await audit(db, { action: 'email_change', userId: u.id, ip: clientIp(req) });
-      const updated = db.select().from(schema.users).where(eq(schema.users.id, u.id)).all()[0]!;
-      res.json({ user: toPublicUser(updated) });
+      const [updated] = await db.select().from(schema.users).where(eq(schema.users.id, u.id));
+      res.json({ user: toPublicUser(updated!) });
     } catch (e) {
       next(e);
     }
@@ -228,13 +227,13 @@ export function createAuthRouter(): Router {
       }
       const { currentPassword, newPassword } = parsed.data;
       const db = getDb();
-      const u = db.select().from(schema.users).where(eq(schema.users.id, req.user.id)).all()[0];
+      const [u] = await db.select().from(schema.users).where(eq(schema.users.id, req.user.id));
       if (!u || !(await verifyPassword(currentPassword, u.password))) {
         throw new HttpError(401, 'unauthorized', INVALID_CREDS_MSG);
       }
       const hashed = await hashPassword(newPassword);
-      db.update(schema.users).set({ password: hashed }).where(eq(schema.users.id, u.id)).run();
-      revokeAllSessionsForUser(db, u.id);
+      await db.update(schema.users).set({ password: hashed }).where(eq(schema.users.id, u.id));
+      await revokeAllSessionsForUser(db, u.id);
       const newSession = await createSession(db, {
         userId: u.id,
         deviceId: (req.headers['x-device-id'] as string) ?? null,

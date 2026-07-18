@@ -38,15 +38,14 @@ function isExpired(expiresAt: number): boolean {
 export function createTelegramRouter(): Router {
   const router = Router();
 
-  router.get('/status', requireAuth, (req: Request, res: Response, next: NextFunction) => {
+  router.get('/status', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.user) throw new HttpError(401, 'unauthorized');
       const db = getDb();
-      const link = db
+      const [link] = await db
         .select()
         .from(schema.telegramLinks)
-        .where(eq(schema.telegramLinks.userId, req.user.id))
-        .all()[0];
+        .where(eq(schema.telegramLinks.userId, req.user.id));
       if (!link) {
         res.json({ linked: false });
         return;
@@ -57,13 +56,13 @@ export function createTelegramRouter(): Router {
     }
   });
 
-  router.post('/link/code', requireAuth, (req: Request, res: Response, next: NextFunction) => {
+  router.post('/link/code', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.user) throw new HttpError(401, 'unauthorized');
       const db = getDb();
       const code = generateLinkCode();
       const expiresAt = nowSeconds() + LINK_EXPIRES_SECONDS;
-      db.insert(schema.telegramActions)
+      await db.insert(schema.telegramActions)
         .values({
           token: code,
           action: 'link_code',
@@ -71,8 +70,7 @@ export function createTelegramRouter(): Router {
           telegramId: null,
           status: 'pending',
           expiresAt,
-        })
-        .run();
+        });
       const botUsername = config.botUsername || 'bot';
       const deepLink = `https://t.me/${botUsername}?start=link_${code}`;
       res.json({ code, deepLink, expiresIn: LINK_EXPIRES_SECONDS });
@@ -81,13 +79,13 @@ export function createTelegramRouter(): Router {
     }
   });
 
-  router.get('/link/check', requireAuth, (req: Request, res: Response, next: NextFunction) => {
+  router.get('/link/check', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.user) throw new HttpError(401, 'unauthorized');
       const code = typeof req.query.code === 'string' ? req.query.code : '';
       if (!code) throw new HttpError(400, 'bad_request', 'code required');
       const db = getDb();
-      const action = db
+      const [action] = await db
         .select()
         .from(schema.telegramActions)
         .where(
@@ -95,8 +93,7 @@ export function createTelegramRouter(): Router {
             eq(schema.telegramActions.token, code),
             eq(schema.telegramActions.action, 'link_code'),
           ),
-        )
-        .all()[0];
+        );
       if (!action) {
         res.json({ status: 'not_found' });
         return;
@@ -106,11 +103,10 @@ export function createTelegramRouter(): Router {
           res.json({ status: 'pending' });
           return;
         }
-        const userRow = db
+        const [userRow] = await db
           .select()
           .from(schema.users)
-          .where(eq(schema.users.id, action.userId))
-          .all()[0];
+          .where(eq(schema.users.id, action.userId));
         res.json({ status: 'linked', login: userRow?.login ?? '' });
         return;
       }
@@ -124,12 +120,12 @@ export function createTelegramRouter(): Router {
     }
   });
 
-  router.post('/qr/login/request', (_req: Request, res: Response, next: NextFunction) => {
+  router.post('/qr/login/request', async (_req: Request, res: Response, next: NextFunction) => {
     try {
       const token = randomBytes(QR_TOKEN_BYTES).toString('base64url');
       const expiresAt = nowSeconds() + QR_EXPIRES_SECONDS;
       const db = getDb();
-      db.insert(schema.telegramActions)
+      await db.insert(schema.telegramActions)
         .values({
           token,
           action: 'qr_login',
@@ -137,8 +133,7 @@ export function createTelegramRouter(): Router {
           telegramId: null,
           status: 'pending',
           expiresAt,
-        })
-        .run();
+        });
       const botUsername = config.botUsername || 'bot';
       const deepLink = `https://t.me/${botUsername}?start=login_${token}`;
       const tgDeepLink = `tg://resolve?domain=${botUsername}&start=login_${token}`;
@@ -153,7 +148,7 @@ export function createTelegramRouter(): Router {
       const token = typeof req.query.token === 'string' ? req.query.token : '';
       if (!token) throw new HttpError(400, 'bad_request', 'token required');
       const db = getDb();
-      const action = db
+      const [action] = await db
         .select()
         .from(schema.telegramActions)
         .where(
@@ -161,8 +156,7 @@ export function createTelegramRouter(): Router {
             eq(schema.telegramActions.token, token),
             eq(schema.telegramActions.action, 'qr_login'),
           ),
-        )
-        .all()[0];
+        );
       if (!action) {
         res.json({ status: 'not_found' });
         return;
@@ -179,11 +173,10 @@ export function createTelegramRouter(): Router {
         res.json({ status: 'pending' });
         return;
       }
-      const userRow = db
+      const [userRow] = await db
         .select()
         .from(schema.users)
-        .where(eq(schema.users.id, action.userId))
-        .all()[0];
+        .where(eq(schema.users.id, action.userId));
       if (!userRow) {
         res.json({ status: 'pending' });
         return;
@@ -214,11 +207,11 @@ export function createTelegramRouter(): Router {
     }
   });
 
-  router.post('/unlink', requireAuth, (req: Request, res: Response, next: NextFunction) => {
+  router.post('/unlink', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.user) throw new HttpError(401, 'unauthorized');
       const db = getDb();
-      db.delete(schema.telegramLinks).where(eq(schema.telegramLinks.userId, req.user.id)).run();
+      await db.delete(schema.telegramLinks).where(eq(schema.telegramLinks.userId, req.user.id));
       void audit(db, { action: 'telegram_unlink', userId: req.user.id, ip: clientIp(req) });
       res.json({ ok: true });
     } catch (e) {

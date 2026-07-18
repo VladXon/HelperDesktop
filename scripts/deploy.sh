@@ -1,7 +1,31 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REMOTE=${REMOTE:-root@178.172.137.167}
+SERVERS=(
+  "server1:root@178.172.137.167"
+  "server2:root@2.26.80.138"
+)
+
+resolve_remote() {
+  local name="$1"
+  for entry in "${SERVERS[@]}"; do
+    local key="${entry%%:*}"
+    local val="${entry#*:}"
+    if [ "$key" = "$name" ]; then
+      echo "$val"
+      return 0
+    fi
+  done
+  echo "Unknown VPS: $name" >&2
+  echo "Available: server1 (Belarus), server2 (Germany)" >&2
+  exit 1
+}
+
+if [ -z "${REMOTE:-}" ]; then
+  VPS="${VPS:-server1}"
+  REMOTE=$(resolve_remote "$VPS")
+fi
+
 REMOTE_DIR=${REMOTE_DIR:-/opt/helperdesktop}
 SSH_KEY=${SSH_KEY:-}
 SSH_OPTS=(-o StrictHostKeyChecking=accept-new)

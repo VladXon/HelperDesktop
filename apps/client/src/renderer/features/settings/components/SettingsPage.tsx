@@ -5,6 +5,7 @@ import { AccountSection } from './AccountSection';
 import { TelegramSection } from './TelegramSection';
 import { ThemeSection } from './ThemeSection';
 import { ServerSection } from './ServerSection';
+import { ServersSection } from './ServersSection';
 
 export function SettingsPage(): React.JSX.Element {
   const { user } = useAuth();
@@ -41,6 +42,14 @@ export function SettingsPage(): React.JSX.Element {
                   </AccordionTrigger>
                   <AccordionContent className="px-8 sm:px-10 pt-6 pb-8">
                     <ThemeSection />
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="servers">
+                  <AccordionTrigger className="px-8 sm:px-10 py-5 hover:bg-white/5 transition-colors text-headline-md font-bold text-text-primary">
+                    Серверы VPS
+                  </AccordionTrigger>
+                  <AccordionContent className="px-8 sm:px-10 pt-6 pb-8">
+                    <ServersSection />
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="server">

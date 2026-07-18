@@ -39,34 +39,32 @@ export function createPresetsRouter(): Router {
   const router = Router();
   router.use(requireAuth);
 
-  router.get('/', (req: Request, res: Response, next: NextFunction) => {
+  router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.user) throw new HttpError(401, 'unauthorized');
       const db = getDb();
-      const rows = db
+      const rows = await db
         .select()
         .from(schema.presets)
         .where(eq(schema.presets.userId, req.user.id))
-        .orderBy(desc(schema.presets.pinned), desc(schema.presets.createdAt))
-        .all();
+        .orderBy(desc(schema.presets.pinned), desc(schema.presets.createdAt));
       res.json({ presets: rows.map(rowToPreset) });
     } catch (e) {
       next(e);
     }
   });
 
-  router.post('/', (req: Request, res: Response, next: NextFunction) => {
+  router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.user) throw new HttpError(401, 'unauthorized');
       const parsed = presetCreateSchema.safeParse(req.body);
       if (!parsed.success) throw new HttpError(400, 'bad_request', 'Invalid input');
       const { name, icon, apps } = parsed.data;
       const db = getDb();
-      const [row] = db
+      const [row] = await db
         .insert(schema.presets)
         .values({ userId: req.user.id, name, icon, apps: JSON.stringify(apps) })
-        .returning()
-        .all();
+        .returning();
       if (!row) throw new HttpError(500, 'internal_error');
       res.status(201).json({ preset: rowToPreset(row) });
     } catch (e) {
@@ -74,18 +72,17 @@ export function createPresetsRouter(): Router {
     }
   });
 
-  router.put('/:id', (req: Request, res: Response, next: NextFunction) => {
+  router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.user) throw new HttpError(401, 'unauthorized');
       const id = parseId(req.params.id ?? '');
       const parsed = presetUpdateSchema.safeParse(req.body);
       if (!parsed.success) throw new HttpError(400, 'bad_request', 'Invalid input');
       const db = getDb();
-      const existing = db
+      const [existing] = await db
         .select()
         .from(schema.presets)
-        .where(and(eq(schema.presets.id, id), eq(schema.presets.userId, req.user.id)))
-        .all()[0];
+        .where(and(eq(schema.presets.id, id), eq(schema.presets.userId, req.user.id)));
       if (!existing) throw new HttpError(404, 'not_found');
 
       const update: Record<string, unknown> = { updatedAt: new Date().toISOString() };
@@ -95,53 +92,50 @@ export function createPresetsRouter(): Router {
       if (data.apps !== undefined) update.apps = JSON.stringify(data.apps);
       if (data.pinned !== undefined) update.pinned = data.pinned;
 
-      db.update(schema.presets).set(update).where(eq(schema.presets.id, id)).run();
-      const updated = db.select().from(schema.presets).where(eq(schema.presets.id, id)).all()[0]!;
-      res.json({ preset: rowToPreset(updated) });
+      await db.update(schema.presets).set(update).where(eq(schema.presets.id, id));
+      const [updated] = await db.select().from(schema.presets).where(eq(schema.presets.id, id));
+      res.json({ preset: rowToPreset(updated!) });
     } catch (e) {
       next(e);
     }
   });
 
-  router.delete('/:id', (req: Request, res: Response, next: NextFunction) => {
+  router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.user) throw new HttpError(401, 'unauthorized');
       const id = parseId(req.params.id ?? '');
       const db = getDb();
-      const existing = db
+      const [existing] = await db
         .select()
         .from(schema.presets)
-        .where(and(eq(schema.presets.id, id), eq(schema.presets.userId, req.user.id)))
-        .all()[0];
+        .where(and(eq(schema.presets.id, id), eq(schema.presets.userId, req.user.id)));
       if (!existing) throw new HttpError(404, 'not_found');
-      db.delete(schema.presets).where(eq(schema.presets.id, id)).run();
+      await db.delete(schema.presets).where(eq(schema.presets.id, id));
       res.json({ ok: true });
     } catch (e) {
       next(e);
     }
   });
 
-  router.patch('/:id/toggle-pin', (req: Request, res: Response, next: NextFunction) => {
+  router.patch('/:id/toggle-pin', async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.user) throw new HttpError(401, 'unauthorized');
       const id = parseId(req.params.id ?? '');
       const parsed = presetTogglePinSchema.safeParse(req.body ?? {});
       if (!parsed.success) throw new HttpError(400, 'bad_request', 'Invalid input');
       const db = getDb();
-      const existing = db
+      const [existing] = await db
         .select()
         .from(schema.presets)
-        .where(and(eq(schema.presets.id, id), eq(schema.presets.userId, req.user.id)))
-        .all()[0];
+        .where(and(eq(schema.presets.id, id), eq(schema.presets.userId, req.user.id)));
       if (!existing) throw new HttpError(404, 'not_found');
 
       const newPinned = !existing.pinned;
-      db.update(schema.presets)
+      await db.update(schema.presets)
         .set({ pinned: newPinned, updatedAt: new Date().toISOString() })
-        .where(eq(schema.presets.id, id))
-        .run();
-      const updated = db.select().from(schema.presets).where(eq(schema.presets.id, id)).all()[0]!;
-      res.json({ preset: rowToPreset(updated) });
+        .where(eq(schema.presets.id, id));
+      const [updated] = await db.select().from(schema.presets).where(eq(schema.presets.id, id));
+      res.json({ preset: rowToPreset(updated!) });
     } catch (e) {
       next(e);
     }

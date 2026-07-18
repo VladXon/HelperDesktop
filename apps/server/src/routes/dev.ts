@@ -18,17 +18,16 @@ export function createDevRouter(): Router {
   const router = Router();
   router.use(requireAuth, requireDev);
 
-  router.get('/serverinfo', (_req: Request, res: Response, next: NextFunction) => {
+  router.get('/serverinfo', async (_req: Request, res: Response, next: NextFunction) => {
     try {
       const db = getDb();
-      const usersCount = db.select({ id: schema.users.id }).from(schema.users).all().length;
-      const sessionsCount = db.select({ id: schema.sessions.id }).from(schema.sessions).all().length;
-      const notesCount = db.select({ id: schema.notes.id }).from(schema.notes).all().length;
-      const presetsCount = db.select({ id: schema.presets.id }).from(schema.presets).all().length;
-      const telegramLinksCount = db
+      const usersCount = (await db.select({ id: schema.users.id }).from(schema.users)).length;
+      const sessionsCount = (await db.select({ id: schema.sessions.id }).from(schema.sessions)).length;
+      const notesCount = (await db.select({ id: schema.notes.id }).from(schema.notes)).length;
+      const presetsCount = (await db.select({ id: schema.presets.id }).from(schema.presets)).length;
+      const telegramLinksCount = (await db
         .select({ userId: schema.telegramLinks.userId })
-        .from(schema.telegramLinks)
-        .all().length;
+        .from(schema.telegramLinks)).length;
       const mem = process.memoryUsage();
       res.json({
         uptime: process.uptime(),
@@ -74,19 +73,18 @@ export function createDevRouter(): Router {
     }
   });
 
-  router.post('/op', (req: Request, res: Response, next: NextFunction) => {
+  router.post('/op', async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.user) throw new HttpError(401, 'unauthorized');
       const parsed = opSchema.safeParse(req.body);
       if (!parsed.success) throw new HttpError(400, 'bad_request', 'Invalid input');
       const { login } = parsed.data;
       const db = getDb();
-      const target = db.select().from(schema.users).where(eq(schema.users.login, login)).all()[0];
+      const [target] = await db.select().from(schema.users).where(eq(schema.users.login, login));
       if (!target) throw new HttpError(404, 'not_found', 'User not found');
-      db.update(schema.users)
+      await db.update(schema.users)
         .set({ isDev: true })
-        .where(eq(schema.users.id, target.id))
-        .run();
+        .where(eq(schema.users.id, target.id));
       void audit(db, {
         action: 'dev_op',
         userId: req.user.id,

@@ -21,15 +21,14 @@ export function createSettingsRouter(): Router {
   const router = Router();
   router.use(requireAuth);
 
-  router.get('/', (req: Request, res: Response, next: NextFunction) => {
+  router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.user) throw new HttpError(401, 'unauthorized');
       const db = getDb();
-      const rows = db
+      const rows = await db
         .select()
         .from(schema.settings)
-        .where(eq(schema.settings.userId, req.user.id))
-        .all();
+        .where(eq(schema.settings.userId, req.user.id));
       const data: Record<string, unknown> = {};
       for (const r of rows) data[r.key] = parseValue(r.value);
       res.json({ data });
@@ -38,17 +37,16 @@ export function createSettingsRouter(): Router {
     }
   });
 
-  router.get('/:key', (req: Request, res: Response, next: NextFunction) => {
+  router.get('/:key', async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.user) throw new HttpError(401, 'unauthorized');
       const key = req.params.key ?? '';
       if (!key) throw new HttpError(400, 'bad_request', 'Invalid key');
       const db = getDb();
-      const row = db
+      const [row] = await db
         .select()
         .from(schema.settings)
-        .where(and(eq(schema.settings.userId, req.user.id), eq(schema.settings.key, key)))
-        .all()[0];
+        .where(and(eq(schema.settings.userId, req.user.id), eq(schema.settings.key, key)));
       if (!row) throw new HttpError(404, 'not_found');
       res.json(rowToSetting(row));
     } catch (e) {
@@ -56,7 +54,7 @@ export function createSettingsRouter(): Router {
     }
   });
 
-  router.put('/:key', (req: Request, res: Response, next: NextFunction) => {
+  router.put('/:key', async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.user) throw new HttpError(401, 'unauthorized');
       const key = req.params.key ?? '';
@@ -66,56 +64,49 @@ export function createSettingsRouter(): Router {
       const db = getDb();
       const now = new Date().toISOString();
       const serialized = JSON.stringify(parsed.data.value);
-      const existing = db
+      const [existing] = await db
         .select()
         .from(schema.settings)
-        .where(and(eq(schema.settings.userId, req.user.id), eq(schema.settings.key, key)))
-        .all()[0];
+        .where(and(eq(schema.settings.userId, req.user.id), eq(schema.settings.key, key)));
       if (existing) {
-        db.update(schema.settings)
+        await db.update(schema.settings)
           .set({ value: serialized, updatedAt: now })
-          .where(and(eq(schema.settings.userId, req.user.id), eq(schema.settings.key, key)))
-          .run();
+          .where(and(eq(schema.settings.userId, req.user.id), eq(schema.settings.key, key)));
       } else {
-        db.insert(schema.settings)
-          .values({ userId: req.user.id, key, value: serialized, updatedAt: now })
-          .run();
+        await db.insert(schema.settings)
+          .values({ userId: req.user.id, key, value: serialized, updatedAt: now });
       }
-      const row = db
+      const [row] = await db
         .select()
         .from(schema.settings)
-        .where(and(eq(schema.settings.userId, req.user.id), eq(schema.settings.key, key)))
-        .all()[0]!;
-      res.json(rowToSetting(row));
+        .where(and(eq(schema.settings.userId, req.user.id), eq(schema.settings.key, key)));
+      res.json(row ? rowToSetting(row) : null);
     } catch (e) {
       next(e);
     }
   });
 
-  router.post('/batch', (req: Request, res: Response, next: NextFunction) => {
+  router.post('/batch', async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.user) throw new HttpError(401, 'unauthorized');
       const parsed = settingBatchSchema.safeParse(req.body);
       if (!parsed.success) throw new HttpError(400, 'bad_request', 'Invalid input');
       const db = getDb();
       const now = new Date().toISOString();
-      db.transaction((tx) => {
+      await db.transaction(async (tx) => {
         for (const [key, value] of Object.entries(parsed.data.data)) {
           const serialized = JSON.stringify(value);
-          const existing = tx
+          const [existing] = await tx
             .select()
             .from(schema.settings)
-            .where(and(eq(schema.settings.userId, req.user!.id), eq(schema.settings.key, key)))
-            .all()[0];
+            .where(and(eq(schema.settings.userId, req.user!.id), eq(schema.settings.key, key)));
           if (existing) {
-            tx.update(schema.settings)
+            await tx.update(schema.settings)
               .set({ value: serialized, updatedAt: now })
-              .where(and(eq(schema.settings.userId, req.user!.id), eq(schema.settings.key, key)))
-              .run();
+              .where(and(eq(schema.settings.userId, req.user!.id), eq(schema.settings.key, key)));
           } else {
-            tx.insert(schema.settings)
-              .values({ userId: req.user!.id, key, value: serialized, updatedAt: now })
-              .run();
+            await tx.insert(schema.settings)
+              .values({ userId: req.user!.id, key, value: serialized, updatedAt: now });
           }
         }
       });

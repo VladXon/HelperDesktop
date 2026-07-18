@@ -1,34 +1,36 @@
 import { sql } from 'drizzle-orm';
 import {
-  check,
+  boolean,
   index,
   integer,
+  pgTable,
   primaryKey,
-  sqliteTable,
+  serial,
   text,
+  timestamp,
   uniqueIndex,
-} from 'drizzle-orm/sqlite-core';
+} from 'drizzle-orm/pg-core';
 
-export const users = sqliteTable(
+export const users = pgTable(
   'users',
   {
-    id: integer('id').primaryKey({ autoIncrement: true }),
+    id: serial('id').primaryKey(),
     login: text('login').notNull(),
     name: text('name').notNull().default(''),
     email: text('email').notNull().default(''),
     password: text('password').notNull(),
-    isDev: integer('is_dev', { mode: 'boolean' }).notNull().default(false),
-    createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+    isDev: boolean('is_dev').notNull().default(false),
+    createdAt: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
   },
   (t) => ({
     loginUnique: uniqueIndex('users_login_unique').on(t.login),
   }),
 );
 
-export const sessions = sqliteTable(
+export const sessions = pgTable(
   'sessions',
   {
-    id: integer('id').primaryKey({ autoIncrement: true }),
+    id: serial('id').primaryKey(),
     userId: integer('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
@@ -39,7 +41,7 @@ export const sessions = sqliteTable(
     ip: text('ip'),
     userAgent: text('user_agent'),
     expiresAt: text('expires_at').notNull(),
-    createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+    createdAt: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
   },
   (t) => ({
     tokenUnique: uniqueIndex('sessions_token_unique').on(t.token),
@@ -50,21 +52,21 @@ export const sessions = sqliteTable(
   }),
 );
 
-export const telegramLinks = sqliteTable(
+export const telegramLinks = pgTable(
   'telegram_links',
   {
     userId: integer('user_id')
       .primaryKey()
       .references(() => users.id, { onDelete: 'cascade' }),
     telegramId: integer('telegram_id').notNull(),
-    linkedAt: text('linked_at').notNull().default(sql`(datetime('now'))`),
+    linkedAt: timestamp('linked_at', { mode: 'string' }).notNull().defaultNow(),
   },
   (t) => ({
     telegramIdUnique: uniqueIndex('telegram_links_telegram_id_unique').on(t.telegramId),
   }),
 );
 
-export const telegramActions = sqliteTable(
+export const telegramActions = pgTable(
   'telegram_actions',
   {
     token: text('token').primaryKey(),
@@ -73,74 +75,64 @@ export const telegramActions = sqliteTable(
     telegramId: integer('telegram_id'),
     status: text('status').notNull().default('pending'),
     expiresAt: integer('expires_at').notNull(),
-    createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+    createdAt: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
   },
   (t) => ({
     expiresIdx: index('idx_telegram_actions_expires')
       .on(t.expiresAt)
       .where(sql`status = 'pending'`),
-    actionCheck: check(
-      'telegram_actions_action_check',
-      sql`action IN ('link_code', 'qr_login')`,
-    ),
-    statusCheck: check(
-      'telegram_actions_status_check',
-      sql`status IN ('pending', 'approved', 'expired')`,
-    ),
   }),
 );
 
-export const notes = sqliteTable(
+export const notes = pgTable(
   'notes',
   {
-    id: integer('id').primaryKey({ autoIncrement: true }),
+    id: serial('id').primaryKey(),
     userId: integer('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     title: text('title').notNull().default(''),
     body: text('body').notNull().default(''),
     tags: text('tags').notNull().default('[]'),
-    pinned: integer('pinned', { mode: 'boolean' }).notNull().default(false),
-    completed: integer('completed', { mode: 'boolean' }).notNull().default(false),
+    pinned: boolean('pinned').notNull().default(false),
+    completed: boolean('completed').notNull().default(false),
     reminderAt: integer('reminder_at'),
-    notifyTelegram: integer('notify_telegram', { mode: 'boolean' }).notNull().default(false),
-    telegramNotified: integer('telegram_notified', { mode: 'boolean' })
-      .notNull()
-      .default(false),
-    createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-    updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+    notifyTelegram: boolean('notify_telegram').notNull().default(false),
+    telegramNotified: boolean('telegram_notified').notNull().default(false),
+    createdAt: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).notNull().defaultNow(),
   },
   (t) => ({
     userIdIdx: index('idx_notes_user_id').on(t.userId),
     reminderIdx: index('idx_notes_reminder')
       .on(t.userId, t.reminderAt)
-      .where(sql`reminder_at IS NOT NULL AND completed = 0`),
+      .where(sql`reminder_at IS NOT NULL AND completed = false`),
     notifyIdx: index('idx_notes_notify')
       .on(t.userId, t.telegramNotified)
-      .where(sql`notify_telegram = 1 AND telegram_notified = 0`),
+      .where(sql`notify_telegram = true AND telegram_notified = false`),
   }),
 );
 
-export const presets = sqliteTable(
+export const presets = pgTable(
   'presets',
   {
-    id: integer('id').primaryKey({ autoIncrement: true }),
+    id: serial('id').primaryKey(),
     userId: integer('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     icon: text('icon').notNull().default(''),
     apps: text('apps').notNull().default('[]'),
-    pinned: integer('pinned', { mode: 'boolean' }).notNull().default(false),
-    createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-    updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+    pinned: boolean('pinned').notNull().default(false),
+    createdAt: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).notNull().defaultNow(),
   },
   (t) => ({
     userIdIdx: index('idx_presets_user_id').on(t.userId),
   }),
 );
 
-export const settings = sqliteTable(
+export const settings = pgTable(
   'settings',
   {
     userId: integer('user_id')
@@ -148,37 +140,37 @@ export const settings = sqliteTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     key: text('key').notNull(),
     value: text('value').notNull(),
-    updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).notNull().defaultNow(),
   },
   (t) => ({
     pk: primaryKey({ columns: [t.userId, t.key] }),
   }),
 );
 
-export const auditLog = sqliteTable(
+export const auditLog = pgTable(
   'audit_log',
   {
-    id: integer('id').primaryKey({ autoIncrement: true }),
+    id: serial('id').primaryKey(),
     userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
     action: text('action').notNull(),
     ip: text('ip'),
     userAgent: text('user_agent'),
     metadata: text('metadata'),
-    createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+    createdAt: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
   },
   (t) => ({
     userIdIdx: index('idx_audit_log_user_id').on(t.userId, t.createdAt),
   }),
 );
 
-export const loginAttempts = sqliteTable(
+export const loginAttempts = pgTable(
   'login_attempts',
   {
-    id: integer('id').primaryKey({ autoIncrement: true }),
+    id: serial('id').primaryKey(),
     ip: text('ip').notNull(),
     login: text('login').notNull(),
-    success: integer('success', { mode: 'boolean' }).notNull(),
-    createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+    success: boolean('success').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
   },
   (t) => ({
     createdIdx: index('idx_login_attempts_created').on(t.createdAt),

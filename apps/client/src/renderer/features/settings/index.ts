@@ -6,6 +6,7 @@ export { TelegramSection } from './components/TelegramSection';
 export { ThemeSection } from './components/ThemeSection';
 export { DevConsole } from './components/DevConsole';
 export { ServerSection } from './components/ServerSection';
+export { ServersSection } from './components/ServersSection';
 export { useSettings } from './hooks/useSettings';
 export { useUpdateSettings } from './hooks/useUpdateSettings';
 export { useTheme } from './hooks/useTheme';

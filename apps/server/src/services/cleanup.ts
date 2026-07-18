@@ -1,5 +1,5 @@
 import { and, isNull, lt } from 'drizzle-orm';
-import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '../db/schema.js';
 import { log } from '../utils/logger.js';
 
@@ -19,51 +19,47 @@ function intMinus(ms: number): number {
   return Math.floor((Date.now() - ms) / 1000);
 }
 
-export function runCleanupOnce(db: BetterSQLite3Database<typeof schema>): {
+export async function runCleanupOnce(db: NodePgDatabase<typeof schema>): Promise<{
   sessions: number;
   actions: number;
   attempts: number;
   audit: number;
-} {
-  const sessionsResult = db
+}> {
+  const sessionsResult = await db
     .delete(schema.sessions)
     .where(
       and(
         isNull(schema.sessions.refreshTokenUsedAt),
         lt(schema.sessions.expiresAt, isoMinus(SESSION_RETENTION_MS)),
       ),
-    )
-    .run();
-  const actionsResult = db
+    );
+  const actionsResult = await db
     .delete(schema.telegramActions)
-    .where(lt(schema.telegramActions.expiresAt, intMinus(ACTIONS_RETENTION_MS)))
-    .run();
-  const attemptsResult = db
+    .where(lt(schema.telegramActions.expiresAt, intMinus(ACTIONS_RETENTION_MS)));
+  const attemptsResult = await db
     .delete(schema.loginAttempts)
-    .where(lt(schema.loginAttempts.createdAt, isoMinus(ATTEMPTS_RETENTION_MS)))
-    .run();
-  const auditResult = db
+    .where(lt(schema.loginAttempts.createdAt, isoMinus(ATTEMPTS_RETENTION_MS)));
+  const auditResult = await db
     .delete(schema.auditLog)
-    .where(lt(schema.auditLog.createdAt, isoMinus(AUDIT_RETENTION_MS)))
-    .run();
+    .where(lt(schema.auditLog.createdAt, isoMinus(AUDIT_RETENTION_MS)));
   return {
-    sessions: sessionsResult.changes,
-    actions: actionsResult.changes,
-    attempts: attemptsResult.changes,
-    audit: auditResult.changes,
+    sessions: sessionsResult.rowCount ?? 0,
+    actions: actionsResult.rowCount ?? 0,
+    attempts: attemptsResult.rowCount ?? 0,
+    audit: auditResult.rowCount ?? 0,
   };
 }
 
-export function startCleanupJob(db: BetterSQLite3Database<typeof schema>): void {
-  const tick = (): void => {
+export function startCleanupJob(db: NodePgDatabase<typeof schema>): void {
+  const tick = async (): Promise<void> => {
     try {
-      const counts = runCleanupOnce(db);
+      const counts = await runCleanupOnce(db);
       log.info('cleanup pass', counts);
     } catch (e) {
       log.error('cleanup pass failed', { error: (e as Error).message });
     }
   };
-  tick();
+  tick().catch((e) => log.error('initial cleanup pass failed', { error: (e as Error).message }));
   timer = setInterval(tick, CLEANUP_INTERVAL_MS);
   timer.unref();
 }

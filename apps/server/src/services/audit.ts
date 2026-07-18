@@ -1,5 +1,5 @@
 import { desc } from 'drizzle-orm';
-import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { schema } from '../db/index.js';
 
 export const AUDIT_ACTIONS = [
@@ -28,29 +28,27 @@ export interface AuditInput {
   metadata?: Record<string, unknown> | null;
 }
 
-export function audit(
-  db: BetterSQLite3Database<typeof schema>,
+export async function audit(
+  db: NodePgDatabase<typeof schema>,
   input: AuditInput,
-): void {
-  db.insert(schema.auditLog)
+): Promise<void> {
+  await db.insert(schema.auditLog)
     .values({
       userId: input.userId ?? null,
       action: input.action,
       ip: input.ip ?? null,
       userAgent: input.userAgent ?? null,
       metadata: input.metadata ? JSON.stringify(input.metadata) : null,
-    })
-    .run();
+    });
 }
 
-export function listAudit(
-  db: BetterSQLite3Database<typeof schema>,
+export async function listAudit(
+  db: NodePgDatabase<typeof schema>,
   limit: number = 100,
-): typeof schema.auditLog.$inferSelect[] {
+): Promise<typeof schema.auditLog.$inferSelect[]> {
   return db
     .select()
     .from(schema.auditLog)
     .orderBy(desc(schema.auditLog.id))
-    .limit(limit)
-    .all();
+    .limit(limit);
 }

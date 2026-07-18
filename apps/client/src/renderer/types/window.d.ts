@@ -107,6 +107,7 @@ export interface ElectronApi {
     getUrl: () => Promise<string>;
     setUrl: (url: string) => Promise<void>;
     test: () => Promise<HealthStatus>;
+    checkUrl: (url: string) => Promise<{ status: 'online' | 'offline' }>;
     onHealth: (callback: (status: HealthStatus) => void) => () => void;
     devServerInfo: () => Promise<DevServerInfo>;
     devRestart: () => Promise<void>;

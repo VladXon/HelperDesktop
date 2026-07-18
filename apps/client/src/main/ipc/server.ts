@@ -82,6 +82,17 @@ export function registerServerIpc(getWindow: () => BrowserWindow | null): void {
     return apiFetch('/api/health', { auth: false });
   });
 
+  ipcMain.handle('server:check-url', async (_e, url: string) => {
+    try {
+      const res = await fetch(`${url}/api/health`, { signal: AbortSignal.timeout(5000) });
+      if (!res.ok) return { status: 'offline' as const };
+      const data = (await res.json()) as { status?: string };
+      return { status: data.status === 'ok' ? 'online' as const : 'offline' as const };
+    } catch {
+      return { status: 'offline' as const };
+    }
+  });
+
   ipcMain.handle('server:on-health', async (event) => {
     const win = BrowserWindow.fromWebContents(event.sender) ?? getWindow();
     const send = (msg: unknown): void => {
