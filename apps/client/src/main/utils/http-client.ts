@@ -91,7 +91,7 @@ export interface ApiFetchOptions {
 async function refreshToken(refresh: string): Promise<{ token: string; refreshToken: string; expiresIn: number } | null> {
   try {
     const baseUrl = await getServerUrl();
-    const res = await net.fetch(`${baseUrl}/api/auth/refresh`, {
+    const res = await net.fetch(new URL('/api/auth/refresh', baseUrl).href, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ refreshToken: refresh }),
@@ -118,7 +118,7 @@ async function saveRefreshedTokens(newToken: string, newRefresh: string): Promis
 export async function apiFetch<T>(path: string, opts: ApiFetchOptions = {}): Promise<T> {
   const { method = 'GET', body, auth = true, skipRefresh = false, raw = false } = opts;
   const baseUrl = await getServerUrl();
-  const url = path.startsWith('http') ? path : `${baseUrl}${path}`;
+  const url = path.startsWith('http') ? path : new URL(path, baseUrl).href;
 
   const headers: Record<string, string> = {};
   let access: string | null = null;
