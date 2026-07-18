@@ -1,16 +1,31 @@
-import { app } from 'electron';
+import { app, net } from 'electron';
 import { join } from 'node:path';
 import { getActiveAccount, readAuthStorage, readDeviceId, writeAuthStorage } from './safe-storage.js';
 import { readJson, writeJson } from './safe-storage.js';
 import type { ServerUrlFile } from './types.js';
 
 const SERVER_URL_FILE = 'server-url.json';
-const DEFAULT_SERVER_URL = 'https://178.172.137.167:3001';
+const DEFAULT_SERVER_URL = 'http://178.172.137.167:3001';
 
 let cachedServerUrl: string | null = null;
 
 function _serverUrlPath(): string {
   return join(app.getPath('userData'), SERVER_URL_FILE);
+}
+
+const HTTP_IPS = ['178.172.137.167', '2.26.80.138'];
+
+function migrateHttpsToHttp(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === 'https:' && HTTP_IPS.includes(parsed.hostname)) {
+      parsed.protocol = 'http:';
+      return parsed.toString();
+    }
+  } catch {
+    /* invalid url, leave as-is */
+  }
+  return url;
 }
 
 export async function getServerUrl(): Promise<string> {
@@ -21,6 +36,11 @@ export async function getServerUrl(): Promise<string> {
   }
   const data = await readJson<ServerUrlFile>(SERVER_URL_FILE);
   cachedServerUrl = data?.url ?? DEFAULT_SERVER_URL;
+  const migrated = migrateHttpsToHttp(cachedServerUrl);
+  if (migrated !== cachedServerUrl) {
+    cachedServerUrl = migrated;
+    await writeJson(SERVER_URL_FILE, { url: migrated });
+  }
   return cachedServerUrl;
 }
 
@@ -71,7 +91,7 @@ export interface ApiFetchOptions {
 async function refreshToken(refresh: string): Promise<{ token: string; refreshToken: string; expiresIn: number } | null> {
   try {
     const baseUrl = await getServerUrl();
-    const res = await fetch(`${baseUrl}/api/auth/refresh`, {
+    const res = await net.fetch(`${baseUrl}/api/auth/refresh`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ refreshToken: refresh }),
@@ -125,7 +145,12 @@ export async function apiFetch<T>(path: string, opts: ApiFetchOptions = {}): Pro
     init.body = raw ? (body as BodyInit) : JSON.stringify(body);
   }
 
-  let res = await fetch(url, init);
+  let res: Response;
+  try {
+    res = await net.fetch(url, init);
+  } catch (err) {
+    throw new HttpError(0, null, err instanceof TypeError ? `Network error: ${err.message}` : `Request failed: ${String(err)}`);
+  }
   if (res.status === 401 && auth && !skipRefresh && access) {
     const acc = await getActiveAccount();
     if (acc) {
@@ -133,7 +158,7 @@ export async function apiFetch<T>(path: string, opts: ApiFetchOptions = {}): Pro
       if (refreshed) {
         await saveRefreshedTokens(refreshed.token, refreshed.refreshToken);
         headers.authorization = `Bearer ${refreshed.token}`;
-        res = await fetch(url, { ...init, headers });
+        res = await net.fetch(url, { ...init, headers });
       } else {
         const storage = await readAuthStorage();
         if (storage.activeAccount) {
@@ -155,7 +180,10 @@ export async function apiFetch<T>(path: string, opts: ApiFetchOptions = {}): Pro
         parsed = null;
       }
     }
-    throw new HttpError(res.status, parsed);
+    const msg = parsed
+      ? `HTTP ${res.status} — ${JSON.stringify(parsed).slice(0, 200)}`
+      : `HTTP ${res.status}`;
+    throw new HttpError(res.status, parsed, msg);
   }
 
   if (res.status === 204) return undefined as T;

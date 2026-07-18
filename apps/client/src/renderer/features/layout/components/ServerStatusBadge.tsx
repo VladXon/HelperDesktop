@@ -17,8 +17,8 @@ interface VpsEntry {
 }
 
 const servers: VpsEntry[] = [
-  { id: 'server1', url: 'https://178.172.137.167:3001', label: 'Сервер 1 — Belarus' },
-  { id: 'server2', url: 'https://2.26.80.138:3001', label: 'Сервер 2 — Germany' },
+  { id: 'server1', url: 'http://178.172.137.167:3001', label: 'Сервер 1 — Belarus' },
+  { id: 'server2', url: 'http://2.26.80.138:3001', label: 'Сервер 2 — Germany' },
 ];
 
 type HealthStatus = 'online' | 'offline' | 'checking';

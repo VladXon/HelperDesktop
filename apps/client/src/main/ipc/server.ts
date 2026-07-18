@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, net } from 'electron';
 import WebSocket from 'ws';
 import { apiFetch, getServerUrl } from '../utils/http-client.js';
 import { readDeviceId } from '../utils/safe-storage.js';
@@ -84,7 +84,7 @@ export function registerServerIpc(getWindow: () => BrowserWindow | null): void {
 
   ipcMain.handle('server:check-url', async (_e, url: string) => {
     try {
-      const res = await fetch(`${url}/api/health`, { signal: AbortSignal.timeout(5000) });
+      const res = await net.fetch(`${url}/api/health`, { signal: AbortSignal.timeout(5000) });
       if (!res.ok) return { status: 'offline' as const };
       const data = (await res.json()) as { status?: string };
       return { status: data.status === 'ok' ? 'online' as const : 'offline' as const };
