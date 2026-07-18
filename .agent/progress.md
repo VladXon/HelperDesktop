@@ -55,6 +55,15 @@
   - Added escalation table for task sizing (direct execute → brief plan → todowrite → subagent)
   - Added explicit priorities: Correctness → Security → Stability → Maintainability → Performance → Developer Experience
 
+- **2026-07-18**: Fixed auth:login "Network error" and "ERR_CONNECTION_RESET" bugs
+  - Root cause: server URL was `https://` but Express runs plain HTTP on port 3001 (no TLS/nginx)
+  - Changed `DEFAULT_SERVER_URL` and server list in `ServerStatusBadge` from `https://` → `http://`
+  - Replaced global `fetch()` with Electron's `net.fetch()` for TLS cert event integration
+  - Added `certificate-error` handler for known IPs (future HTTPS support)
+  - Added request logging middleware for debugging
+  - Fixed URL construction from string concat to `new URL(path, baseUrl)` (prevented double-slash `//api/auth/...`)
+  - Deployed server to VPS, ran PostgreSQL migration (tables were missing), created user
+
 ## Backlog
 
 - _(add planned work here)_
