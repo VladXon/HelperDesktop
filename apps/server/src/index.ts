@@ -58,11 +58,6 @@ export function createApp(): Express {
   app.use(requestId);
   app.use(globalRateLimit);
 
-  app.use((req, _res, next) => {
-    console.log(`[req] ${req.method} ${req.originalUrl}`);
-    next();
-  });
-
   app.get('/api/health', (_req, res) => {
     res.json({
       status: 'ok',
