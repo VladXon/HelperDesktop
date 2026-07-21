@@ -10,11 +10,6 @@ export interface SyncEngineOptions {
   onError?: (error: string) => void;
 }
 
-const EMPTY_ITEMS: PoeItemRecord[] = [];
-const EMPTY_SKILLS: PoeSkillRecord[] = [];
-const EMPTY_LEAGUES: PoeLeagueRecord[] = [];
-const EMPTY_SNAPSHOTS: EconomySnapshot[] = [];
-
 export async function runSyncPipeline(
   source: string,
   tasks: Array<{ name: string; fn: SyncTask<unknown> }>,
