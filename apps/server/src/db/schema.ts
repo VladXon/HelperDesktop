@@ -5,6 +5,7 @@ import {
   integer,
   pgTable,
   primaryKey,
+  real,
   serial,
   text,
   timestamp,
@@ -177,6 +178,266 @@ export const loginAttempts = pgTable(
   }),
 );
 
+// ── PoE Analyzer tables ──
+
+export const poeCurrencySnapshots = pgTable(
+  'poe_currency_snapshots',
+  {
+    id: serial('id').primaryKey(),
+    league: text('league').notNull(),
+    currencyType: text('currency_type').notNull(),
+    chaosEquivalent: real('chaos_equivalent').notNull(),
+    divineEquivalent: real('divine_equivalent').notNull(),
+    change24h: real('change_24h'),
+    listingCount: integer('listing_count'),
+    snapshotTime: integer('snapshot_time').notNull(),
+    source: text('source').notNull().default('ninja'),
+  },
+  (t) => ({
+    leagueCurrencyTimeIdx: index('idx_cs_league_time').on(t.league, t.currencyType, t.snapshotTime),
+  }),
+);
+
+export const poeMarketSnapshots = pgTable(
+  'poe_market_snapshots',
+  {
+    id: serial('id').primaryKey(),
+    league: text('league').notNull(),
+    itemName: text('item_name').notNull(),
+    itemType: text('item_type').notNull(),
+    chaosValue: real('chaos_value').notNull(),
+    divineValue: real('divine_value'),
+    change24h: real('change_24h'),
+    listingCount: integer('listing_count'),
+    snapshotTime: integer('snapshot_time').notNull(),
+    source: text('source').notNull().default('trade'),
+  },
+  (t) => ({
+    leagueItemTimeIdx: index('idx_ms_league_time').on(t.league, t.itemName, t.snapshotTime),
+  }),
+);
+
+export const poeTradeSearchCache = pgTable(
+  'poe_trade_search_cache',
+  {
+    id: serial('id').primaryKey(),
+    queryHash: text('query_hash').notNull().unique(),
+    queryJson: text('query_json').notNull(),
+    league: text('league').notNull(),
+    resultJson: text('result_json').notNull(),
+    totalItems: integer('total_items').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
+    expiresAt: integer('expires_at').notNull(),
+  },
+);
+
+export const poeBuilds = pgTable(
+  'poe_builds',
+  {
+    id: serial('id').primaryKey(),
+    buildHash: text('build_hash').notNull().unique(),
+    game: text('game').notNull(),
+    name: text('name'),
+    source: text('source').notNull(),
+    characterClass: text('character_class'),
+    ascendancy: text('ascendancy'),
+    level: integer('level'),
+    rawSourceHash: text('raw_source_hash'),
+    createdAt: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
+  },
+);
+
+export const poeBuildAnalyses = pgTable(
+  'poe_build_analyses',
+  {
+    id: serial('id').primaryKey(),
+    buildHash: text('build_hash').notNull(),
+    game: text('game'),
+    league: text('league'),
+    patchVersion: text('patch_version'),
+    analyzerVersion: text('analyzer_version'),
+    analysisContextJson: text('analysis_context_json'),
+    resultJson: text('result_json').notNull(),
+    overallScore: integer('overall_score').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).notNull().defaultNow(),
+  },
+  (t) => ({
+    buildHashIdx: index('idx_ba_hash').on(t.buildHash),
+    scoreIdx: index('idx_ba_score').on(t.overallScore),
+  }),
+);
+
+export const poeItemValuations = pgTable(
+  'poe_item_valuations',
+  {
+    id: serial('id').primaryKey(),
+    league: text('league').notNull(),
+    itemHash: text('item_hash').notNull(),
+    itemName: text('item_name').notNull(),
+    itemType: text('item_type').notNull(),
+    chaosValue: real('chaos_value').notNull(),
+    confidence: text('confidence').notNull(),
+    listingCount: integer('listing_count'),
+    minPrice: real('min_price'),
+    medianPrice: real('median_price'),
+    maxPrice: real('max_price'),
+    valuedAt: integer('valued_at').notNull(),
+    source: text('source').notNull().default('trade'),
+  },
+);
+
+export const poeItems = pgTable(
+  'poe_items',
+  {
+    id: serial('id').primaryKey(),
+    game: text('game').notNull(),
+    name: text('name').notNull(),
+    baseType: text('base_type'),
+    itemType: text('item_type'),
+    category: text('category'),
+    level: integer('level'),
+    requiredLevel: integer('required_level'),
+    flavourText: text('flavour_text'),
+    explicitStatsJson: text('explicit_stats_json'),
+    dropSourcesJson: text('drop_sources_json'),
+    icon: text('icon'),
+    source: text('source').notNull().default('wiki'),
+    sourceUrl: text('source_url'),
+    version: text('version').notNull().default('1.0'),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (t) => ({
+    gameNameUnique: uniqueIndex('idx_items_game_name').on(t.game, t.name),
+  }),
+);
+
+export const poeSkills = pgTable(
+  'poe_skills',
+  {
+    id: serial('id').primaryKey(),
+    game: text('game').notNull(),
+    name: text('name').notNull(),
+    type: text('type').notNull(),
+    tagsJson: text('tags_json').notNull(),
+    gemLevel: integer('gem_level'),
+    manaMultiplier: integer('mana_multiplier'),
+    qualityStatsJson: text('quality_stats_json'),
+    source: text('source').notNull().default('wiki'),
+    sourceUrl: text('source_url'),
+    version: text('version').notNull().default('1.0'),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (t) => ({
+    gameNameTypeUnique: uniqueIndex('idx_skills_game_name').on(t.game, t.name, t.type),
+  }),
+);
+
+export const poeMetaBuilds = pgTable(
+  'poe_meta_builds',
+  {
+    id: serial('id').primaryKey(),
+    game: text('game').notNull(),
+    league: text('league').notNull(),
+    name: text('name').notNull(),
+    class: text('class').notNull(),
+    ascendancy: text('ascendancy'),
+    mainSkill: text('main_skill'),
+    budget: text('budget').notNull(),
+    popularity: integer('popularity'),
+    pastebinUrl: text('pastebin_url'),
+    forumUrl: text('forum_url'),
+    tagsJson: text('tags_json'),
+    source: text('source').notNull().default('forum'),
+    sourceUrl: text('source_url'),
+    version: text('version').notNull().default('1.0'),
+    updatedAt: integer('updated_at').notNull(),
+  },
+);
+
+export const poeCraftingMethods = pgTable(
+  'poe_crafting_methods',
+  {
+    id: serial('id').primaryKey(),
+    game: text('game').notNull(),
+    methodName: text('method_name').notNull(),
+    targetItem: text('target_item').notNull(),
+    stepsJson: text('steps_json').notNull(),
+    estimatedCostLow: real('estimated_cost_low'),
+    estimatedCostHigh: real('estimated_cost_high'),
+    requiredUnlocksJson: text('required_unlocks_json'),
+    source: text('source').notNull().default('community'),
+    sourceUrl: text('source_url'),
+    version: text('version').notNull().default('1.0'),
+    updatedAt: integer('updated_at').notNull(),
+  },
+);
+
+export const poeLeagueInfo = pgTable(
+  'poe_league_info',
+  {
+    id: serial('id').primaryKey(),
+    game: text('game').notNull(),
+    leagueId: text('league_id').notNull(),
+    leagueName: text('league_name').notNull(),
+    isCurrent: boolean('is_current').notNull().default(false),
+    isHardcore: boolean('is_hardcore').notNull().default(false),
+    isSsf: boolean('is_ssf').notNull().default(false),
+    startDate: integer('start_date').notNull(),
+    endDate: integer('end_date'),
+    version: text('version').notNull().default('1.0'),
+  },
+);
+
+export const poeEconomicEvents = pgTable(
+  'poe_economic_events',
+  {
+    id: serial('id').primaryKey(),
+    league: text('league').notNull(),
+    eventType: text('event_type').notNull(),
+    currency: text('currency'),
+    itemName: text('item_name'),
+    description: text('description').notNull(),
+    changePercent: real('change_percent'),
+    occurredAt: integer('occurred_at').notNull(),
+  },
+);
+
+export const poeAiRequests = pgTable(
+  'poe_ai_requests',
+  {
+    id: serial('id').primaryKey(),
+    buildAnalysisId: integer('build_analysis_id'),
+    provider: text('provider').notNull(),
+    model: text('model').notNull(),
+    promptVersion: text('prompt_version').notNull(),
+    promptHash: text('prompt_hash').notNull(),
+    inputTokens: integer('input_tokens'),
+    outputTokens: integer('output_tokens'),
+    status: text('status').notNull(),
+    responseText: text('response_text'),
+    errorMessage: text('error_message'),
+    createdAt: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
+  },
+  (t) => ({
+    analysisIdx: index('idx_ar_analysis').on(t.buildAnalysisId),
+    statusIdx: index('idx_ar_status').on(t.status),
+  }),
+);
+
+export const poeAiProviderSettings = pgTable(
+  'poe_ai_provider_settings',
+  {
+    id: serial('id').primaryKey(),
+    provider: text('provider').notNull().unique(),
+    model: text('model').notNull(),
+    endpoint: text('endpoint'),
+    enabled: boolean('enabled').notNull().default(false),
+    createdAt: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).notNull().defaultNow(),
+  },
+);
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Session = typeof sessions.$inferSelect;
@@ -195,3 +456,32 @@ export type TelegramLink = typeof telegramLinks.$inferSelect;
 export type NewTelegramLink = typeof telegramLinks.$inferInsert;
 export type TelegramAction = typeof telegramActions.$inferSelect;
 export type NewTelegramAction = typeof telegramActions.$inferInsert;
+
+export type PoeCurrencySnapshot = typeof poeCurrencySnapshots.$inferSelect;
+export type NewPoeCurrencySnapshot = typeof poeCurrencySnapshots.$inferInsert;
+export type PoeMarketSnapshot = typeof poeMarketSnapshots.$inferSelect;
+export type NewPoeMarketSnapshot = typeof poeMarketSnapshots.$inferInsert;
+export type PoeTradeSearchCache = typeof poeTradeSearchCache.$inferSelect;
+export type NewPoeTradeSearchCache = typeof poeTradeSearchCache.$inferInsert;
+export type PoeBuild = typeof poeBuilds.$inferSelect;
+export type NewPoeBuild = typeof poeBuilds.$inferInsert;
+export type PoeBuildAnalysis = typeof poeBuildAnalyses.$inferSelect;
+export type NewPoeBuildAnalysis = typeof poeBuildAnalyses.$inferInsert;
+export type PoeItemValuation = typeof poeItemValuations.$inferSelect;
+export type NewPoeItemValuation = typeof poeItemValuations.$inferInsert;
+export type PoeItem = typeof poeItems.$inferSelect;
+export type NewPoeItem = typeof poeItems.$inferInsert;
+export type PoeSkill = typeof poeSkills.$inferSelect;
+export type NewPoeSkill = typeof poeSkills.$inferInsert;
+export type PoeMetaBuild = typeof poeMetaBuilds.$inferSelect;
+export type NewPoeMetaBuild = typeof poeMetaBuilds.$inferInsert;
+export type PoeCraftingMethod = typeof poeCraftingMethods.$inferSelect;
+export type NewPoeCraftingMethod = typeof poeCraftingMethods.$inferInsert;
+export type PoeLeagueInfo = typeof poeLeagueInfo.$inferSelect;
+export type NewPoeLeagueInfo = typeof poeLeagueInfo.$inferInsert;
+export type PoeEconomicEvent = typeof poeEconomicEvents.$inferSelect;
+export type NewPoeEconomicEvent = typeof poeEconomicEvents.$inferInsert;
+export type PoeAiRequest = typeof poeAiRequests.$inferSelect;
+export type NewPoeAiRequest = typeof poeAiRequests.$inferInsert;
+export type PoeAiProviderSetting = typeof poeAiProviderSettings.$inferSelect;
+export type NewPoeAiProviderSetting = typeof poeAiProviderSettings.$inferInsert;
