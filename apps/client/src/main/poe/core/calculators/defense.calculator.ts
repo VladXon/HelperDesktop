@@ -1,10 +1,18 @@
 import type { ComputedItemStats, BuildConfig, DefenseReport, LeechSummary, GuardSkillSummary } from '../models/index.js';
 
+// ---- Approximation constants ----
+// All values below are best-effort estimates. Exact game values vary by class,
+// attacker accuracy, hit size, and patch version. Not game-accurate calculations.
+
+/** Base life per level — class-independent average. Actual per-level life ranges 9.5-12.5 by class. */
 const BASE_LIFE_PER_LEVEL = 12;
+/** Base mana per level — class-independent average. */
 const BASE_MANA_PER_LEVEL = 6;
+/** Life gained per point of strength. Accurate for PoE1. */
 const LIFE_PER_STR = 0.5;
+/** Mana gained per point of intelligence. Accurate for PoE1. */
 const MANA_PER_INT = 0.5;
-const ACCURACY_PER_DEX = 2;
+/** Evasion gained per point of dexterity. Accurate for PoE1. */
 const EVASION_PER_DEX = 0.2;
 
 const MAX_RESIST_CAP = 75;
@@ -22,6 +30,7 @@ export function calculateDefense(
   const attrMana = stats.attributes.int * MANA_PER_INT;
 
   const totalFlatLife = baseLife + stats.life + attrLife;
+  // Approximation: hardcoded +5% fallback when exact increased life value is unparsed
   const increasedLife = (stats.increasedDamage['life'] ?? 0) + (stats.explicits.filter((m) => m.name.includes('increased maximum life')).length > 0 ? 5 : 0);
   const finalLife = Math.round(totalFlatLife * (1 + increasedLife / 100));
 
@@ -63,21 +72,26 @@ export function calculateDefense(
   const armour = stats.armour;
   const evasion = stats.evasion + (stats.attributes.dex * EVASION_PER_DEX);
 
+  // Phys reduction approximation: armour / (armour + damage*5), assuming ~1000 dmg hit
   const physReduction = armour > 0
     ? Math.min(Math.round((armour / (armour + 5000)) * 100), 90)
     : 0;
 
+  // Evasion approximation: evasion / (evasion + attackerAccuracy), assuming ~10000 accuracy
   const evadeChance = evasion > 0
     ? Math.min(Math.round((evasion / (evasion + 10000)) * 100), 95)
     : 0;
 
   const lifeRegenPercent = stats.lifeRegen / finalLife * 100;
+
+  // STUB: Leech calculation not yet implemented
   const leechSummary: LeechSummary = {
     totalLeech: 0,
     leechRate: 0,
     duration: 0,
   };
 
+  // STUB: Guard skill detection not yet implemented
   const guardSkill: GuardSkillSummary | null = null;
 
   const physEhp = armour > 0
@@ -102,7 +116,7 @@ export function calculateDefense(
     lifeOnBlock: stats.onBlockGain,
     energyShieldRecharge: finalES > 0 ? Math.round(finalES * 0.2) : 0,
     esRechargeDelay: 2,
-    recoupPercent: 0,
+    recoupPercent: 0, // STUB: recoup calculation not yet implemented
   };
 
   return {
@@ -123,7 +137,7 @@ export function calculateDefense(
       elementalMaxHit: eleEhp,
       chaosMaxHit: chaosEhp,
     },
-    ailmentImmunity: {},
+    ailmentImmunity: {}, // STUB: ailment detection not yet implemented
     guardSkill,
   };
 }

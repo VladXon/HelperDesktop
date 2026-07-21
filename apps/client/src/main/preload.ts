@@ -88,6 +88,17 @@ const api = {
   push: {
     show: (title: string, body: string) => invoke<void>('push:show', title, body),
   },
+  poe: {
+    setSession: (poesessid: string) => invoke<{ valid: boolean; accountName?: string }>('poe:set-session', poesessid),
+    getSession: () => invoke<{ configured: boolean; valid: boolean; accountName: string | null }>('poe:get-session'),
+    clearSession: () => invoke<void>('poe:clear-session'),
+    getLeagues: () => invoke<Array<{ id: string; text: string }>>('poe:get-leagues'),
+    fetchExchangeRate: (league: string, have: string, want: string) => invoke<{ listings: unknown[]; total: number }>('poe:fetch-exchange-rate', league, have, want),
+    searchItems: (league: string, query: Record<string, unknown>) => invoke<{ id: string; items: unknown[]; total: number }>('poe:search-items', league, query),
+    fetchCharacters: () => invoke<unknown[]>('poe:fetch-characters'),
+    fetchStashItems: (league: string, tabIndex: number) => invoke<unknown>('poe:fetch-stash-items', league, tabIndex),
+    fetchExchangeHistory: () => invoke<unknown>('poe:fetch-exchange-history'),
+  },
 };
 
 contextBridge.exposeInMainWorld('api', api);

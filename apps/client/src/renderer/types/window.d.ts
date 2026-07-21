@@ -132,6 +132,17 @@ export interface ElectronApi {
   push: {
     show: (title: string, body: string) => Promise<void>;
   };
+  poe: {
+    setSession: (poesessid: string) => Promise<{ valid: boolean; accountName?: string }>;
+    getSession: () => Promise<{ configured: boolean; valid: boolean; accountName: string | null }>;
+    clearSession: () => Promise<void>;
+    getLeagues: () => Promise<{ id: string; text: string }[]>;
+    fetchExchangeRate: (league: string, have: string, want: string) => Promise<{ listings: unknown[]; total: number }>;
+    searchItems: (league: string, query: Record<string, unknown>) => Promise<{ id: string; items: unknown[]; total: number }>;
+    fetchCharacters: () => Promise<unknown[]>;
+    fetchStashItems: (league: string, tabIndex: number) => Promise<unknown>;
+    fetchExchangeHistory: () => Promise<unknown>;
+  };
 }
 
 declare global {

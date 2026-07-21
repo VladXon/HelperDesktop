@@ -3,7 +3,18 @@ import type { ComputedItemStats, BuildConfig, OffenseReport, SkillSummary, Damag
 const BASE_MONSTER_RESISTANCE = 30;
 const BOSS_RESISTANCE_MAP = { normal: 30, rare: 40, boss: 50, uber: 70 } as const;
 
-export function calculateOffense(
+/**
+ * Estimates offense metrics (DPS, penetration, crit, etc.).
+ *
+ * Produces a best-effort approximation, NOT a game-accurate calculation.
+ * DPS values are unreliable when:
+ *   - Base damage ranges are unavailable (placeholder fallback used)
+ *   - Support gem interactions are not modeled
+ *   - Complex mechanics (DoT, minions, triggers) are not handled
+ *
+ * STUB: DoT/dotDps, witherStacks, shockEffect are not yet implemented.
+ */
+export function estimateOffense(
   stats: ComputedItemStats,
   config: BuildConfig,
   skillName: string,
@@ -71,18 +82,20 @@ export function calculateOffense(
     critChance,
     critMultiplier,
     attackSpeed,
-    isDotBuild: false,
-    dotDps: 0,
-    witherStacks: 0,
-    shockEffect: 0,
+    isDotBuild: false,  // STUB: DoT detection not yet implemented
+    dotDps: 0,           // STUB
+    witherStacks: 0,     // STUB
+    shockEffect: 0,      // STUB
   };
 }
 
+/** Returns flat damage from stats, or a placeholder when unavailable. */
 function computeBaseDamage(stats: ComputedItemStats): DamageRange[] {
   if (stats.flatDamage.length > 0) return stats.flatDamage;
   return [{ type: 'physical', min: 10, max: 20 }];
 }
 
+/** STUB: Not yet wired to real skill gem data. Always returns empty. */
 function damageRanges(): DamageRange[] {
   return [];
 }

@@ -9,6 +9,7 @@ import { registerServerIpc } from './ipc/server.js';
 import { registerDialogIpc } from './ipc/dialog.js';
 import { registerWindowIpc, registerShellIpc, setMainWindow, setupDeepLink, handleDeepLink } from './ipc/window.js';
 import { registerPushIpc } from './ipc/push.js';
+import { registerPoeIpc } from './ipc/poe.js';
 import { startPushWatcher } from './push-watcher.js';
 
 if (requireElectronSquirrel()) app.quit();
@@ -47,6 +48,7 @@ function registerAllIpc(): void {
   registerWindowIpc();
   registerShellIpc();
   registerPushIpc();
+  registerPoeIpc();
 }
 
 function createWindow(): void {

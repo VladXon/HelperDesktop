@@ -1,6 +1,6 @@
 import type { Build, AnalysisResult, AnalysisContext, BuildSummary, BuildScores, OffenseReport, DefenseReport, ScalingReport, Problem, Warning, UpgradeRecommendation, AnalysisMetadata } from '../models/index.js';
 import { resolveBuildStats } from '../resolvers/stat-resolver.js';
-import { calculateOffense } from '../calculators/damage.calculator.js';
+import { estimateOffense } from '../calculators/damage.calculator.js';
 import { calculateDefense } from '../calculators/defense.calculator.js';
 import { evaluateDamageReport, evaluateDefenseReport, evaluateScaling, detectUpgrades } from '../rules/index.js';
 
@@ -98,7 +98,7 @@ export function analyze(build: Build, context?: Partial<AnalysisContext>): Analy
   );
 
   const mainSkill = detectMainSkill(build);
-  const offense = calculateOffense(resolvedStats, build.config, mainSkill.name, [], mainSkill.effectiveness, 0.8);
+  const offense = estimateOffense(resolvedStats, build.config, mainSkill.name, [], mainSkill.effectiveness, 0.8);
   const defense = calculateDefense(resolvedStats, build.config, build.character.level, build.character.class);
 
   const damageEvaluation = evaluateDamageReport(offense);

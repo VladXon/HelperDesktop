@@ -13,11 +13,12 @@ import { useRouter } from '../../../providers/RouterProvider';
 import { notesCommands } from '../../notes';
 import { presetsCommands } from '../../presets';
 import { settingsCommands } from '../../settings';
+import { poeCommands } from '../../poe-assistant';
 
 export interface CommandDef {
   id: string;
   label: string;
-  section: 'Pages' | 'Notes' | 'Presets' | 'Settings';
+  section: 'Pages' | 'Notes' | 'Presets' | 'PoE' | 'Settings';
   keywords?: string[];
   action: () => void;
 }
@@ -34,8 +35,9 @@ export function CommandPalette(): React.JSX.Element {
       { id: 'page.notes', label: 'Перейти к заметкам', section: 'Pages', action: setPaletteCloseAnd(() => navigate({ page: 'notes' })) },
       { id: 'page.presets', label: 'Перейти к пресетам', section: 'Pages', action: setPaletteCloseAnd(() => navigate({ page: 'presets' })) },
       { id: 'page.settings', label: 'Перейти к настройкам', section: 'Pages', action: setPaletteCloseAnd(() => navigate({ page: 'settings' })) },
+      { id: 'page.poe', label: 'PoE Assistant', section: 'Pages', action: setPaletteCloseAnd(() => navigate({ page: 'poe-assistant' })) },
     ];
-    return [...pages, ...notesCommands(closeCommandPalette), ...presetsCommands(closeCommandPalette), ...settingsCommands(closeCommandPalette)];
+    return [...pages, ...notesCommands(closeCommandPalette), ...presetsCommands(closeCommandPalette), ...poeCommands(closeCommandPalette), ...settingsCommands(closeCommandPalette)];
   }, [closeCommandPalette, navigate]);
 
   const grouped = React.useMemo(() => {

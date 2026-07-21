@@ -1,6 +1,12 @@
 import { inflateRawSync } from 'node:zlib';
 import type { PoBXmlDTO, PoBBuildAttributes, PoBSkillSet, PoBSkill, PoBItem, PoBMod, PoBSocket, PoBTree, PoBConfig } from '../dto/pob-xml.dto.js';
 
+// ---- Supported PoB XML versions ----
+// This parser targets Path of Building Community Fork (openarl/PathOfBuilding).
+// Tested with targetVersion="3_0" (Build tag) and treeVersion="3_25" (Tree/Spec tag).
+// Unknown versions or fields are silently accepted with defaults — no crash.
+// Future versions with structural XML changes will need parser updates.
+
 const PASTEBIN_URL_RE = /^https:\/\/pastebin\.com\/(?:raw\/)?([a-zA-Z0-9_-]+)$/;
 
 function decodeBase64(encoded: string): Buffer {
@@ -234,7 +240,7 @@ function parseConfigSection(xml: string): PoBConfig {
   const configBlock = extractTag(xml, 'Config');
   const charges = { frenzy: 0, power: 0, endurance: 0 };
   let isBoss = false;
-  const enemyResistances = 30;
+  let enemyResistances = 30; // Default. PoB Config may contain per-element resistance overrides.
 
   if (!configBlock) return { isBoss, enemyResistances, charges };
 
@@ -257,6 +263,8 @@ function parseConfigSection(xml: string): PoBConfig {
         isBoss = boolVal === 'true'; break;
       case 'enemylevel': case 'enemymaplevel':
         if (numVal >= 84) isBoss = true; break;
+      // PoisonConfig handles enemy elemental resistances per element;
+      // the single enemyResistances average is an approximation.
     }
   }
 

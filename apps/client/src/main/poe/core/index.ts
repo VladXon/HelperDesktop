@@ -1,6 +1,6 @@
 export { fromPob } from './factory/build-factory.js';
 export { resolveBuildStats, resolveItemStats, aggregateMods } from './resolvers/stat-resolver.js';
-export { calculateOffense } from './calculators/damage.calculator.js';
+export { estimateOffense } from './calculators/damage.calculator.js';
 export { calculateDefense } from './calculators/defense.calculator.js';
 export { evaluateDamageReport, evaluateDefenseReport, evaluateScaling, detectUpgrades } from './rules/index.js';
 export { analyze } from './engine/analyzer.engine.js';
