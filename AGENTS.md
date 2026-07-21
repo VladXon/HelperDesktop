@@ -542,18 +542,15 @@ All AI secrets (API keys) must be stored through Electron `safeStorage`. Never s
 
 ## PoE Database Rule
 
-PoE Analyzer uses isolated local SQLite storage.
+PoE Analyzer data is stored in the server PostgreSQL database alongside all other application data.
 
-Location: `app.getPath('userData')/poe-analyzer.db`
+Location: `apps/server/src/db/schema.ts` — Drizzle ORM with `node-postgres`, same database as the rest of the application.
 
 Reasons:
-- offline-capable — no backend server dependency
-- independent migrations from server PostgreSQL
-- easier backup/export of PoE data
-
-## Database Architecture Rule
-
-The project uses PostgreSQL as the primary database. All persistent application data belongs to PostgreSQL. PoE Analyzer data is stored in PostgreSQL tables. The PoE Analyzer must not introduce a separate database unless explicitly approved.
+- Centralized data — all PoE tables in one database for sync, backup, and querying
+- Standardized migrations — same Drizzle pipeline as server tables
+- No client-side native module dependencies (no better-sqlite3 in Electron)
+- Server API serves as the single source of truth; client consumes through IPC/API
 
 Electron local storage is used only for: encrypted secrets (via safeStorage), client preferences, and temporary cache.
 
