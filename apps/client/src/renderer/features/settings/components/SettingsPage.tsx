@@ -17,7 +17,7 @@ export function SettingsPage(): React.JSX.Element {
 
         <section className="glass-panel rounded-2xl overflow-hidden relative">
           <div className="inner-edge-highlight" />
-          <Accordion type="multiple" defaultValue={['account', 'telegram']}>
+          <Accordion type="multiple" defaultValue={['account', 'telegram', 'server']}>
             <AccordionItem value="account">
               <AccordionTrigger className="px-8 sm:px-10 py-5 hover:bg-white/5 transition-colors text-headline-md font-bold text-text-primary">
                 Аккаунт
@@ -32,6 +32,14 @@ export function SettingsPage(): React.JSX.Element {
               </AccordionTrigger>
               <AccordionContent className="px-8 sm:px-10 pt-6 pb-8">
                 <TelegramSection />
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="server">
+              <AccordionTrigger className="px-8 sm:px-10 py-5 hover:bg-white/5 transition-colors text-headline-md font-bold text-text-primary">
+                Сервер
+              </AccordionTrigger>
+              <AccordionContent className="px-8 sm:px-10 pt-6 pb-8">
+                <ServerSection />
               </AccordionContent>
             </AccordionItem>
             {user?.isDev ? (
@@ -50,14 +58,6 @@ export function SettingsPage(): React.JSX.Element {
                   </AccordionTrigger>
                   <AccordionContent className="px-8 sm:px-10 pt-6 pb-8">
                     <ServersSection />
-                  </AccordionContent>
-                </AccordionItem>
-                <AccordionItem value="server">
-                  <AccordionTrigger className="px-8 sm:px-10 py-5 hover:bg-white/5 transition-colors text-headline-md font-bold text-text-primary">
-                    Сервер
-                  </AccordionTrigger>
-                  <AccordionContent className="px-8 sm:px-10 pt-6 pb-8">
-                    <ServerSection />
                   </AccordionContent>
                 </AccordionItem>
               </>

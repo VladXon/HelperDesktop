@@ -1,4 +1,4 @@
-import { net } from 'electron';
+import { BrowserWindow, net } from 'electron';
 
 const GGG_BASE = 'https://www.pathofexile.com';
 
@@ -53,45 +53,94 @@ function maskSessionId(poesessid: string): string {
   return poesessid.slice(0, 4) + '***' + poesessid.slice(-4);
 }
 
-async function gggFetch<T>(path: string, poesessid: string): Promise<T> {
-  const url = `${GGG_BASE}${path}`;
+interface GggApiResponse<T> {
+  success: boolean;
+  data?: T;
+  status?: number;
+  error?: string;
+}
 
-  const res = await net.fetch(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-      'Cookie': `POESESSID=${poesessid}`,
-      'Accept': 'application/json, text/plain, */*',
+function createGggWindow(): BrowserWindow {
+  const win = new BrowserWindow({
+    width: 1024,
+    height: 768,
+    show: false,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
     },
   });
 
-  if (res.status === 429) {
-    const retryAfter = res.headers.get('Retry-After');
-    throw Object.assign(new Error(`GGG rate limit exceeded${retryAfter ? ` — retry after ${retryAfter}s` : ''}`), {
-      code: 'rate_limited',
-      retryAfter: retryAfter ? parseInt(retryAfter, 10) : 60,
-    });
-  }
+  return win;
+}
 
-  if (res.status === 401 || res.status === 403) {
-    throw Object.assign(new Error('PoE session expired — reconnect your Path of Exile account'), { code: 'session_expired' });
+function makeGggError(status: number, bodyText: string): Error {
+  if (status === 429) {
+    if (bodyText.includes('Just a moment') || bodyText.includes('challenge') || bodyText.includes('cf-browser')) {
+      return Object.assign(new Error('Cloudflare challenge — try again in a moment'), { code: 'rate_limited', retryAfter: 5 });
+    }
+    return Object.assign(new Error('GGG rate limit exceeded — retry after 60s'), { code: 'rate_limited', retryAfter: 60 });
   }
-
-  if (res.status === 404) {
-    throw Object.assign(new Error('POESESSID invalid or copied incorrectly — check your browser cookies'), { code: 'session_invalid' });
+  if (status === 401 || status === 403) {
+    return Object.assign(new Error('PoE session expired — reconnect your Path of Exile account'), { code: 'session_expired' });
   }
-
-  if (!res.ok) {
-    throw Object.assign(new Error(`GGG API returned ${res.status}`), { code: 'ggg_unavailable' });
+  if (status === 404) {
+    return Object.assign(new Error('POESESSID invalid or copied incorrectly — check your browser cookies'), { code: 'session_invalid' });
   }
+  return Object.assign(new Error(`GGG API returned ${status}`), { code: 'ggg_unavailable' });
+}
 
-  return res.json() as Promise<T>;
+async function fetchViaWindow<T>(path: string, poesessid: string): Promise<T> {
+  const url = `${GGG_BASE}${path}`;
+  const win = createGggWindow();
+
+  try {
+    await win.loadURL(`${GGG_BASE}/login`);
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+
+    const cookieScript = `
+      document.cookie = 'POESESSID=${poesessid}; path=/; domain=.pathofexile.com; Secure; SameSite=Lax';
+    `;
+    await win.webContents.executeJavaScript(cookieScript);
+
+    const fetchScript = `
+      (async () => {
+        try {
+          const res = await fetch(${JSON.stringify(url)}, {
+            headers: { 'Accept': 'application/json' },
+          });
+          const text = await res.text();
+          let data;
+          try { data = JSON.parse(text); } catch { data = null; }
+          return { success: true, data, status: res.status };
+        } catch (e) {
+          return { success: false, error: String(e) };
+        }
+      })()
+    `;
+
+    const result: GggApiResponse<T> = await win.webContents.executeJavaScript(fetchScript);
+
+    if (!result.success) {
+      throw new Error(`GGG API call failed: ${result.error}`);
+    }
+
+    if (result.status && result.status !== 200) {
+      const bodyText = JSON.stringify(result.data ?? '');
+      throw makeGggError(result.status, bodyText);
+    }
+
+    return result.data as T;
+  } finally {
+    win.destroy();
+  }
 }
 
 export function createElectronGggProvider() {
   return {
     async getAccountName(poesessid: string): Promise<string> {
       console.log('[ggg:electron] getAccountName', maskSessionId(poesessid));
-      const data = await gggFetch<{ name?: string }>('/api/profile', poesessid);
+      const data = await fetchViaWindow<{ name?: string }>('/api/profile', poesessid);
       if (!data?.name) throw Object.assign(new Error('Could not validate POESESSID — no account name returned'), { code: 'session_invalid' });
       return data.name;
     },
@@ -99,7 +148,7 @@ export function createElectronGggProvider() {
     async getCharacters(poesessid: string, accountName?: string): Promise<GggCharacter[]> {
       console.log('[ggg:electron] getCharacters', maskSessionId(poesessid));
       const query = accountName ? `?accountName=${encodeURIComponent(accountName)}` : '';
-      const data = await gggFetch<GggCharacter[]>(`/character-window/get-characters${query}`, poesessid);
+      const data = await fetchViaWindow<GggCharacter[]>(`/character-window/get-characters${query}`, poesessid);
       return data ?? [];
     },
 
@@ -109,7 +158,7 @@ export function createElectronGggProvider() {
         `character=${encodeURIComponent(characterName)}`,
         accountName ? `accountName=${encodeURIComponent(accountName)}` : '',
       ].filter(Boolean).join('&');
-      return gggFetch<GggCharacterDetail>(`/character-window/get-items?${query}`, poesessid);
+      return fetchViaWindow<GggCharacterDetail>(`/character-window/get-items?${query}`, poesessid);
     },
   };
 }
