@@ -16,6 +16,7 @@
     "db:migrate": "tsx src/db/migrate.ts"
   },
   "dependencies": {
+    "@helper/poe-backend": "workspace:*",
     "@helper/shared": "workspace:*",
     "pg": "^8.13.0",
     "cors": "^2.8.5",

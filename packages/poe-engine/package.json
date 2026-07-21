@@ -1,0 +1,35 @@
+{
+  "name": "@helper/poe-engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Path of Exile calculation engine — pure TypeScript, platform-agnostic",
+  "type": "module",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    },
+    "./registry": {
+      "types": "./dist/src/registry/index.d.ts",
+      "import": "./dist/src/registry/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "generate:registry": "tsx src/scripts/generate-registry.ts"
+  },
+  "dependencies": {
+    "@helper/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0",
+    "vitest": "^2.1.0"
+  }
+}

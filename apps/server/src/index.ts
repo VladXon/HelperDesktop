@@ -13,6 +13,9 @@ import { createSettingsRouter } from './routes/settings.js';
 import { createTelegramRouter } from './routes/telegram.js';
 import { createInternalRouter } from './routes/internal.js';
 import { createDevRouter } from './routes/dev.js';
+import { createPoeOauthRouter } from './routes/poe-auth.js';
+import { createPoeBuildsRouter } from './routes/poe-builds.js';
+import { createPoeAccountsRouter } from './routes/poe-accounts.js';
 import { attachWebSocket } from './ws.js';
 import { BotManager } from './services/bot-manager.js';
 import { startCleanupJob } from './services/cleanup.js';
@@ -64,6 +67,13 @@ export function createApp(): Express {
       timestamp: new Date().toISOString(),
       version: config.version,
       db: 'ok',
+      routes: {
+        poe: {
+          auth: ['GET /url', 'GET /callback', 'GET /characters', 'GET /characters/:name', 'GET /status'],
+          builds: ['POST /', 'GET /', 'GET /:hash', 'DELETE /:hash', 'POST /compare'],
+          accounts: ['GET /', 'DELETE /:id'],
+        },
+      },
     });
   });
 
@@ -74,6 +84,9 @@ export function createApp(): Express {
   app.use('/api/telegram', createTelegramRouter());
   app.use('/api/internal/bot', createInternalRouter());
   app.use('/api/dev', createDevRouter());
+  app.use('/api/poe/auth', createPoeOauthRouter());
+  app.use('/api/poe/builds', createPoeBuildsRouter());
+  app.use('/api/poe/accounts', createPoeAccountsRouter());
 
   app.use((req, res) => {
     res.status(404).json({ error: 'not_found', requestId: req.requestId });

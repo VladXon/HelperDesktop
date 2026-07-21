@@ -42,6 +42,10 @@ ssh "${SSH_OPTS[@]}" "$REMOTE" "set -euo pipefail
   git pull --ff-only
   echo '--- pnpm install ---'
   pnpm install --frozen-lockfile
+  echo '--- build shared package ---'
+  pnpm --filter @helper/shared build
+  echo '--- build poe-backend package ---'
+  pnpm --filter @helper/poe-backend build
   echo '--- db:migrate ---'
   pnpm --filter @helper/server db:migrate
   echo '--- build server ---'

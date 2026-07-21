@@ -142,6 +142,44 @@ export interface ElectronApi {
     fetchCharacters: () => Promise<unknown[]>;
     fetchStashItems: (league: string, tabIndex: number) => Promise<unknown>;
     fetchExchangeHistory: () => Promise<unknown>;
+    importUrl: (url: string) => Promise<unknown>;
+    importXml: (xml: string) => Promise<unknown>;
+    analyze: (urlOrXml: string, isUrl?: boolean) => Promise<unknown>;
+
+    saveBuild: (data: {
+      pobUrl: string;
+      rawPobXml: string;
+      buildName: string;
+      characterClass: string;
+      ascendancy: string | null;
+      level: number;
+      game: string;
+      source: string;
+      analysis?: unknown;
+    }) => Promise<{ id: number; buildHash: string }>;
+    listBuilds: () => Promise<Array<{
+      id: number;
+      buildHash: string;
+      name: string | null;
+      characterClass: string | null;
+      ascendancy: string | null;
+      level: number | null;
+      pobUrl: string | null;
+      game: string;
+      overallScore: number | null;
+      lastAnalyzedAt: string | null;
+      createdAt: string;
+    }>>;
+    deleteBuild: (buildHash: string) => Promise<void>;
+    compareBuilds: (hashA: string, hashB: string) => Promise<unknown>;
+    getAccounts: () => Promise<Array<{ id: number; accountName: string; connected: boolean }>>;
+    disconnectAccount: (id: number) => Promise<void>;
+    connectAccount: () => Promise<{ authUrl: string; state: string }>;
+    completeOAuth: (code: string, state: string) => Promise<{ connected: boolean; accountName: string }>;
+    getOAuthStatus: () => Promise<{ connected: boolean; accountName: string | null; tokenValid: boolean; expiresAt: string | null; scopes: string | null }>;
+    fetchOAuthCharacters: () => Promise<{ characters: Array<{ name: string; league: string; class: string; level: number }> }>;
+    fetchCharacterDetail: (name: string) => Promise<Record<string, unknown>>;
+    analyzeCharacter: (name: string) => Promise<unknown>;
   };
 }
 

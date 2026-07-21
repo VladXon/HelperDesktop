@@ -38,6 +38,10 @@ const envSchema = z
     JWT_SECRET: z.string().default(''),
     BOT_SHARED_SECRET: z.string().default(''),
     CORS_ORIGINS: z.string().default(''),
+    POE_CLIENT_ID: z.string().default(''),
+    POE_CLIENT_SECRET: z.string().default(''),
+    POE_REDIRECT_URI: z.string().default(''),
+    POE_TOKEN_ENCRYPTION_KEY: z.string().default(''),
   })
   .transform((env) => {
     const isProd = env.NODE_ENV === 'production';
@@ -74,6 +78,10 @@ const envSchema = z
       botSharedSecret,
       corsOrigins,
       version: '0.1.0',
+      poeClientId: env.POE_CLIENT_ID,
+      poeClientSecret: env.POE_CLIENT_SECRET,
+      poeRedirectUri: env.POE_REDIRECT_URI,
+      poeEncryptionKey: env.POE_TOKEN_ENCRYPTION_KEY,
       warnings,
     };
   });

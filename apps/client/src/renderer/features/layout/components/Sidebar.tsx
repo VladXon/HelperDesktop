@@ -1,9 +1,9 @@
 import type * as React from 'react';
-import { ListChecks, Stack, Gear, CurrencyCircleDollar } from '@phosphor-icons/react';
+import { ListChecks, Stack, Gear, CurrencyCircleDollar, PuzzlePiece } from '@phosphor-icons/react';
 import { useRouter } from '../../../providers/RouterProvider';
 
 interface NavItem {
-  id: 'notes' | 'presets' | 'poe-assistant' | 'settings';
+  id: 'notes' | 'presets' | 'poe-assistant' | 'poe-analyzer' | 'settings';
   label: string;
   Icon: typeof ListChecks;
 }
@@ -12,6 +12,7 @@ const items: NavItem[] = [
   { id: 'notes', label: 'Заметки', Icon: ListChecks },
   { id: 'presets', label: 'Пресеты', Icon: Stack },
   { id: 'poe-assistant', label: 'PoE', Icon: CurrencyCircleDollar },
+  { id: 'poe-analyzer', label: 'Анализатор', Icon: PuzzlePiece },
   { id: 'settings', label: 'Настройки', Icon: Gear },
 ];
 

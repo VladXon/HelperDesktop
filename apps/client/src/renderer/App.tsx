@@ -13,6 +13,7 @@ import { NotesPage } from './features/notes';
 import { PresetsPage } from './features/presets';
 import { SettingsPage } from './features/settings';
 import { PoeAssistantPage } from './features/poe-assistant';
+import { PoeAnalyzerPage } from './features/poe';
 import { AiInspectorOverlay, AiInspectorProvider } from './features/ai-inspector';
 import { onNoteLink } from './lib/deep-link';
 
@@ -50,6 +51,10 @@ function MainApp(): React.JSX.Element {
           e.preventDefault();
           navigate({ page: 'poe-assistant' });
           break;
+        case 'b':
+          e.preventDefault();
+          navigate({ page: 'poe-analyzer' });
+          break;
         case 'F4':
           e.preventDefault();
           setScanEnabled((prev) => {
@@ -71,17 +76,20 @@ function MainApp(): React.JSX.Element {
     const onNewPreset = (): void => navigate({ page: 'presets', newPreset: true });
     const onOpenSettings = (): void => navigate({ page: 'settings' });
     const onOpenPoe = (): void => navigate({ page: 'poe-assistant' });
+    const onOpenPoeAnalyzer = (): void => navigate({ page: 'poe-analyzer' });
     const onDeepNote = (id: number): void => navigate({ page: 'notes', editNoteId: id });
     window.addEventListener('notes:new', onNewNote);
     window.addEventListener('presets:new', onNewPreset);
     window.addEventListener('settings:open', onOpenSettings);
     window.addEventListener('poe-assistant:open', onOpenPoe);
+    window.addEventListener('poe-analyzer:open', onOpenPoeAnalyzer);
     const offDeepLink = onNoteLink(onDeepNote);
     return () => {
       window.removeEventListener('notes:new', onNewNote);
       window.removeEventListener('presets:new', onNewPreset);
       window.removeEventListener('settings:open', onOpenSettings);
       window.removeEventListener('poe-assistant:open', onOpenPoe);
+      window.removeEventListener('poe-analyzer:open', onOpenPoeAnalyzer);
       offDeepLink();
     };
   }, [navigate]);
@@ -102,6 +110,7 @@ function MainApp(): React.JSX.Element {
               {current.page === 'notes' ? <NotesPage /> : null}
               {current.page === 'presets' ? <PresetsPage /> : null}
               {current.page === 'poe-assistant' ? <PoeAssistantPage /> : null}
+              {current.page === 'poe-analyzer' ? <PoeAnalyzerPage /> : null}
               {current.page === 'settings' ? <SettingsPage /> : null}
             </ErrorBoundary>
           </main>

@@ -6,7 +6,7 @@ export { schema };
 export type { User, Session, Note, Preset, Setting, AuditLog, LoginAttempt, TelegramLink, TelegramAction } from './schema.js';
 
 const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL ?? 'postgresql://helperadmin:helper_secret_2026@localhost:5432/helperdesktop',
+  connectionString: process.env.DATABASE_URL ?? 'postgresql://localhost:5432/helperdesktop',
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,

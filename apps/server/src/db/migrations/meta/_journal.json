@@ -15,6 +15,13 @@
       "when": 1784633980374,
       "tag": "0001_sleepy_cyclops",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1753106400000,
+      "tag": "0002_fluffy_marvel_boys",
+      "breakpoints": true
     }
   ]
 }

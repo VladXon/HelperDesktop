@@ -17,7 +17,6 @@
     "@helper/shared": "workspace:*",
     "better-sqlite3": "^12.0.0",
     "grammy": "1.44.0",
-    "nanoid": "^5.0.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {
@@ -25,7 +24,6 @@
     "@types/node": "^20.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.8.0",
-    "vitest": "^2.1.0",
-    "vitest-mock-extended": "^2.0.2"
+    "vitest": "^2.1.0"
   }
 }

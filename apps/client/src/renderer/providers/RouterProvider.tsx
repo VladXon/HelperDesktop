@@ -5,7 +5,8 @@ type RouteState =
   | { page: 'notes'; editNoteId?: number; newNote?: boolean }
   | { page: 'presets'; newPreset?: boolean }
   | { page: 'settings' }
-  | { page: 'poe-assistant' };
+  | { page: 'poe-assistant' }
+  | { page: 'poe-analyzer' };
 
 interface RouterState {
   current: RouteState;

@@ -14,11 +14,12 @@ import { notesCommands } from '../../notes';
 import { presetsCommands } from '../../presets';
 import { settingsCommands } from '../../settings';
 import { poeCommands } from '../../poe-assistant';
+import { poeAnalyzerCommands } from '../../poe';
 
 export interface CommandDef {
   id: string;
   label: string;
-  section: 'Pages' | 'Notes' | 'Presets' | 'PoE' | 'Settings';
+  section: 'Pages' | 'Notes' | 'Presets' | 'PoE' | 'PoE Analyzer' | 'Settings';
   keywords?: string[];
   action: () => void;
 }
@@ -36,8 +37,9 @@ export function CommandPalette(): React.JSX.Element {
       { id: 'page.presets', label: 'Перейти к пресетам', section: 'Pages', action: setPaletteCloseAnd(() => navigate({ page: 'presets' })) },
       { id: 'page.settings', label: 'Перейти к настройкам', section: 'Pages', action: setPaletteCloseAnd(() => navigate({ page: 'settings' })) },
       { id: 'page.poe', label: 'PoE Assistant', section: 'Pages', action: setPaletteCloseAnd(() => navigate({ page: 'poe-assistant' })) },
+      { id: 'page.poe-analyzer', label: 'PoE Build Analyzer', section: 'Pages', action: setPaletteCloseAnd(() => navigate({ page: 'poe-analyzer' })) },
     ];
-    return [...pages, ...notesCommands(closeCommandPalette), ...presetsCommands(closeCommandPalette), ...poeCommands(closeCommandPalette), ...settingsCommands(closeCommandPalette)];
+    return [...pages, ...notesCommands(closeCommandPalette), ...presetsCommands(closeCommandPalette), ...poeCommands(closeCommandPalette), ...poeAnalyzerCommands(closeCommandPalette), ...settingsCommands(closeCommandPalette)];
   }, [closeCommandPalette, navigate]);
 
   const grouped = React.useMemo(() => {

@@ -1,0 +1,38 @@
+{
+  "name": "@helper/poe-data",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Path of Exile external data integration — HTTP, PoB, APIs, normalizers",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./http": {
+      "types": "./dist/http/index.d.ts",
+      "import": "./dist/http/index.js"
+    },
+    "./pob": {
+      "types": "./dist/pob/index.d.ts",
+      "import": "./dist/pob/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@helper/poe-engine": "workspace:*",
+    "@helper/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.8.0",
+    "vitest": "^2.1.0"
+  }
+}

@@ -18,5 +18,5 @@
     "src/preload/**/*.ts"
   ],
   "exclude": ["node_modules", ".vite", "out", "**/__tests__/**"],
-  "references": [{ "path": "../../packages/shared" }]
+  "references": [{ "path": "../../packages/shared" }, { "path": "../../packages/poe-engine" }]
 }

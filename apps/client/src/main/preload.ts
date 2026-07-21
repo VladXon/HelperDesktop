@@ -98,6 +98,23 @@ const api = {
     fetchCharacters: () => invoke<unknown[]>('poe:fetch-characters'),
     fetchStashItems: (league: string, tabIndex: number) => invoke<unknown>('poe:fetch-stash-items', league, tabIndex),
     fetchExchangeHistory: () => invoke<unknown>('poe:fetch-exchange-history'),
+    importUrl: (url: string) => invoke<unknown>('poe:import-url', url),
+    importXml: (xml: string) => invoke<unknown>('poe:import-xml', xml),
+    analyze: (urlOrXml: string, isUrl?: boolean) => invoke<unknown>('poe:analyze', urlOrXml, isUrl),
+
+    saveBuild: (data: unknown) => invoke<{ id: number; buildHash: string }>('poe:save-build', data),
+    listBuilds: () => invoke<unknown[]>('poe:list-builds'),
+    deleteBuild: (buildHash: string) => invoke<void>('poe:delete-build', buildHash),
+    compareBuilds: (hashA: string, hashB: string) => invoke<unknown>('poe:compare-builds', hashA, hashB),
+
+    getAccounts: () => invoke<Array<{ id: number; accountName: string; connected: boolean }>>('poe:get-accounts'),
+    disconnectAccount: (id: number) => invoke<void>('poe:disconnect-account', id),
+    connectAccount: () => invoke<{ authUrl: string; state: string }>('poe:get-auth-url'),
+    completeOAuth: (code: string, state: string) => invoke<{ connected: boolean; accountName: string }>('poe:complete-oauth', code, state),
+    getOAuthStatus: () => invoke<{ connected: boolean; accountName: string | null; tokenValid: boolean; expiresAt: string | null; scopes: string | null }>('poe:get-oauth-status'),
+    fetchOAuthCharacters: () => invoke<{ characters: Array<{ name: string; league: string; class: string; level: number }> }>('poe:fetch-oauth-characters'),
+    fetchCharacterDetail: (name: string) => invoke<Record<string, unknown>>('poe:fetch-character-detail', name),
+    analyzeCharacter: (name: string) => invoke<unknown>('poe:analyze-character', name),
   },
 };
 

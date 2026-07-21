@@ -1,173 +1,224 @@
-import { ipcMain, net, safeStorage } from 'electron';
-import { readJson, writeJson, encryptionAvailable } from '../utils/safe-storage.js';
+import { ipcMain, shell } from 'electron';
+import { createPoeAccountService } from '../services/poe/poe-account.service.js';
+import { createPoeTradeService } from '../services/poe/poe-trade.service.js';
+import { createPoeImportService } from '../services/poe/poe-import.service.js';
+import { createPoeAnalysisService } from '../services/poe/poe-analysis.service.js';
+import { convertCharacterToBuild } from '../services/poe/poe-character.service.js';
+import { createModDB } from '@helper/poe-engine';
+import type { ModDB } from '@helper/poe-engine';
+import * as backend from '../services/poe/backend-client.js';
 
-const POE_SESSION_FILE = 'poe-session.json';
-const POE_API_BASE = 'https://www.pathofexile.com';
-const MAX_LISTINGS = 20;
+let _poeInitialized = false;
+let _modDb: ModDB | null = null;
 
-let rateLimitGate: Promise<unknown> = Promise.resolve();
-function rateLimited<T>(fn: () => Promise<T>): Promise<T> {
-  const result = rateLimitGate.then(fn);
-  rateLimitGate = result.then(() => new Promise((r) => setTimeout(r, 334))).catch(() => new Promise((r) => setTimeout(r, 334)));
-  return result;
-}
-
-interface PoeSessionData {
-  poesessid: string;
-  accountName: string | null;
-  validatedAt: number | null;
-}
-
-async function readPoeSession(): Promise<PoeSessionData> {
-  const data = await readJson<{ encrypted: string }>(POE_SESSION_FILE);
-  if (!data?.encrypted || !encryptionAvailable()) return { poesessid: '', accountName: null, validatedAt: null };
-  try {
-    const buf = Buffer.from(data.encrypted, 'base64');
-    const decrypted = safeStorage.decryptString(buf);
-    return JSON.parse(decrypted) as PoeSessionData;
-  } catch {
-    return { poesessid: '', accountName: null, validatedAt: null };
-  }
-}
-
-async function writePoeSession(session: PoeSessionData): Promise<void> {
-  if (!encryptionAvailable()) return;
-  const plain = JSON.stringify(session);
-  const buf = safeStorage.encryptString(plain);
-  await writeJson(POE_SESSION_FILE, { encrypted: buf.toString('base64') });
-}
-
-async function gggFetch<T>(path: string, poesessid?: string): Promise<T> {
-  return rateLimited(async () => {
-    const url = path.startsWith('http') ? path : `${POE_API_BASE}${path}`;
-    const headers: Record<string, string> = { 'User-Agent': 'HelperDesktop/1.0' };
-    if (poesessid) headers.cookie = `POESESSID=${poesessid}`;
-    const res = await net.fetch(url, { headers });
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      throw new Error(`GGG API ${res.status}: ${text.slice(0, 200)}`);
-    }
-    return res.json() as Promise<T>;
-  });
-}
-
-async function validateSession(poesessid: string): Promise<{ valid: boolean; accountName?: string }> {
-  try {
-    const data = await gggFetch<{ name?: string }>('/character-window/get-account-name', poesessid);
-    if (data?.name) return { valid: true, accountName: data.name };
-    return { valid: false };
-  } catch {
-    return { valid: false };
-  }
+function getModDb(): ModDB {
+  if (!_modDb) _modDb = createModDB();
+  return _modDb;
 }
 
 export function registerPoeIpc(): void {
+  if (_poeInitialized) return;
+  _poeInitialized = true;
+
+  const account = createPoeAccountService();
+  const trade = createPoeTradeService();
+  const importService = createPoeImportService();
+  const analysis = createPoeAnalysisService(getModDb());
+
+  // ── Session management (delegated to account service) ──
   ipcMain.handle('poe:set-session', async (_e, poesessid: string) => {
-    const { valid, accountName } = await validateSession(poesessid);
+    const { valid, accountName } = await account.validateSession(poesessid);
     if (valid) {
-      await writePoeSession({ poesessid, accountName: accountName ?? null, validatedAt: Date.now() });
+      await account.writeSession({ poesessid, accountName: accountName ?? null, validatedAt: Date.now() });
       return { valid: true, accountName };
     }
     return { valid: false };
   });
 
-  ipcMain.handle('poe:get-session', async () => {
-    const session = await readPoeSession();
-    if (!session.poesessid) return { configured: false, valid: false, accountName: null };
-    const age = session.validatedAt ? Date.now() - session.validatedAt : Infinity;
-    if (age > 60 * 60 * 1000) {
-      const result = await validateSession(session.poesessid);
-      if (!result.valid) {
-        await writePoeSession({ poesessid: '', accountName: null, validatedAt: null });
-        return { configured: false, valid: false, accountName: null };
-      }
-      await writePoeSession({ ...session, validatedAt: Date.now() });
-      return { configured: true, valid: true, accountName: result.accountName ?? session.accountName };
-    }
-    return { configured: true, valid: true, accountName: session.accountName };
+  ipcMain.handle('poe:get-session', () => account.getSession());
+  ipcMain.handle('poe:clear-session', () => account.clearSession());
+
+  // ── Trade / data (delegated to trade service) ──
+  ipcMain.handle('poe:get-leagues', () => trade.getLeagues());
+  ipcMain.handle('poe:fetch-exchange-rate', (_e, league: string, have: string, want: string) =>
+    trade.fetchExchangeRate(league, have, want),
+  );
+  ipcMain.handle('poe:search-items', (_e, league: string, query: Record<string, unknown>) =>
+    trade.searchItems(league, query),
+  );
+  ipcMain.handle('poe:fetch-exchange-history', () => trade.fetchExchangeHistory());
+
+  // ── Characters / stash (delegated to account service) ──
+  ipcMain.handle('poe:fetch-characters', () => account.fetchCharacters());
+  ipcMain.handle('poe:fetch-stash-items', (_e, league: string, tabIndex: number) =>
+    account.fetchStashItems(league, tabIndex),
+  );
+
+  // ── NEW: PoB import ──
+  ipcMain.handle('poe:import-url', async (_e, url: string) => {
+    const result = await importService.importFromUrl(url);
+    return {
+      dto: result.dto,
+      modifierCount: result.modifiers.length,
+      buildSummary: {
+        name: result.dto.build.className,
+        ascendancy: result.dto.build.ascendClassName,
+        level: result.dto.build.level,
+      },
+    };
   });
 
-  ipcMain.handle('poe:clear-session', async () => {
-    await writePoeSession({ poesessid: '', accountName: null, validatedAt: null });
+  ipcMain.handle('poe:import-xml', async (_e, rawXml: string) => {
+    const result = await importService.importFromXml(rawXml);
+    return {
+      dto: result.dto,
+      modifierCount: result.modifiers.length,
+      buildSummary: {
+        name: result.dto.build.className,
+        ascendancy: result.dto.build.ascendClassName,
+        level: result.dto.build.level,
+      },
+    };
   });
 
-  ipcMain.handle('poe:get-leagues', async () => {
-    const data = await gggFetch<{ result: Array<{ id: string; text: string }> }>('/api/trade/data/leagues');
-    return data.result ?? [];
+  // ── NEW: Build analysis ──
+  ipcMain.handle('poe:analyze', async (_e, urlOrXml: string, isUrl?: boolean) => {
+    const importResult = isUrl
+      ? await importService.importFromUrl(urlOrXml)
+      : await importService.importFromXml(urlOrXml);
+
+    const analysisResult = await analysis.analyze({
+      build: importResult.build,
+      modifiers: importResult.modifiers,
+    });
+
+    return {
+      import: {
+        buildSummary: {
+          name: importResult.dto.build.className,
+          ascendancy: importResult.dto.build.ascendClassName,
+          level: importResult.dto.build.level,
+        },
+        modifierCount: importResult.modifiers.length,
+      },
+      analysis: {
+        offense: analysisResult.legacy.facts.offense,
+        defense: analysisResult.legacy.facts.defense,
+        scaling: analysisResult.legacy.facts.scaling,
+        problems: analysisResult.legacy.insights.problems.map((p) => ({
+          severity: p.severity,
+          message: p.message,
+          category: p.category,
+        })),
+        recommendations: analysisResult.legacy.insights.recommendations.map((r) => ({
+          itemSlot: r.itemSlot,
+          upgradePriority: r.upgradePriority,
+          targetStats: r.targetStats,
+          estimatedBudgetLow: r.estimatedBudgetLow,
+          estimatedBudgetHigh: r.estimatedBudgetHigh,
+          improvementPercent: r.improvementPercent,
+        })),
+        scores: analysisResult.legacy.scores,
+        metadata: analysisResult.legacy.metadata,
+      },
+      explanation: analysisResult.explanation
+        ? {
+            summary: analysisResult.explanation.summary,
+          }
+        : null,
+    };
   });
 
-  ipcMain.handle('poe:fetch-exchange-rate', async (_e, league: string, have: string, want: string) => {
-    const body = JSON.stringify({ exchange: { status: { option: 'online' }, have: [have], want: [want] } });
-    const res = await rateLimited(() =>
-      net.fetch(`${POE_API_BASE}/api/trade/exchange/${encodeURIComponent(league)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'User-Agent': 'HelperDesktop/1.0' },
-        body,
-      }),
-    );
-    if (!res.ok) throw new Error(`GGG API ${res.status}`);
-    const data = (await res.json()) as { id: string; result: Record<string, unknown>; total: number };
-    const listingIds = Object.keys(data.result).slice(0, MAX_LISTINGS);
-    if (listingIds.length === 0) return { listings: [], total: data.total };
-
-    const hash = listingIds.join(',');
-    const detailRes = await rateLimited(() =>
-      net.fetch(`${POE_API_BASE}/api/trade/fetch/${hash}?query=${data.id}`, {
-        headers: { 'User-Agent': 'HelperDesktop/1.0' },
-      }),
-    );
-    if (!detailRes.ok) throw new Error(`GGG API ${detailRes.status}`);
-    const detailData = (await detailRes.json()) as { result: Record<string, unknown>[] };
-    return { listings: detailData.result ?? [], total: data.total };
+  // ── Phase 10: Backend persistence ──
+  ipcMain.handle('poe:save-build', async (_e, data) => {
+    return backend.saveBuild(data);
   });
 
-  ipcMain.handle('poe:search-items', async (_e, league: string, query: Record<string, unknown>) => {
-    const res = await rateLimited(() =>
-      net.fetch(`${POE_API_BASE}/api/trade/search/${encodeURIComponent(league)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'User-Agent': 'HelperDesktop/1.0' },
-        body: JSON.stringify(query),
-      }),
-    );
-    if (!res.ok) throw new Error(`GGG API ${res.status}`);
-    const data = (await res.json()) as { id: string; result: string[]; total: number };
-    const ids = data.result.slice(0, MAX_LISTINGS);
-    if (ids.length === 0) return { id: data.id, items: [], total: data.total };
-
-    const hash = ids.join(',');
-    const detailRes = await rateLimited(() =>
-      net.fetch(`${POE_API_BASE}/api/trade/fetch/${hash}?query=${data.id}`, {
-        headers: { 'User-Agent': 'HelperDesktop/1.0' },
-      }),
-    );
-    if (!detailRes.ok) throw new Error(`GGG API ${detailRes.status}`);
-    const detailData = (await detailRes.json()) as { result: unknown[] };
-    return { id: data.id, items: detailData.result, total: data.total };
+  ipcMain.handle('poe:list-builds', async () => {
+    return backend.listBuilds();
   });
 
-  ipcMain.handle('poe:fetch-characters', async () => {
-    const session = await readPoeSession();
-    if (!session.poesessid) throw new Error('POESESSID not configured');
-    const valid = await validateSession(session.poesessid);
-    if (!valid.valid) throw new Error('Session expired');
-    return gggFetch<unknown[]>('/character-window/get-characters', session.poesessid);
+  ipcMain.handle('poe:delete-build', async (_e, buildHash: string) => {
+    return backend.deleteBuild(buildHash);
   });
 
-  ipcMain.handle('poe:fetch-stash-items', async (_e, league: string, tabIndex: number) => {
-    const session = await readPoeSession();
-    if (!session.poesessid) throw new Error('POESESSID not configured');
-    const valid = await validateSession(session.poesessid);
-    if (!valid.valid) throw new Error('Session expired');
-    return gggFetch(`/character-window/get-stash-items?league=${encodeURIComponent(league)}&tabs=1&tabIndex=${tabIndex}`, session.poesessid);
+  ipcMain.handle('poe:compare-builds', async (_e, hashA: string, hashB: string) => {
+    return backend.compareBuilds(hashA, hashB);
   });
 
-  ipcMain.handle('poe:fetch-exchange-history', async () => {
-    const res = await rateLimited(() =>
-      net.fetch('https://web.poecdn.com/api/currency-exchange', {
-        headers: { 'User-Agent': 'HelperDesktop/1.0' },
-      }),
-    );
-    if (!res.ok) throw new Error(`GGG API ${res.status}`);
-    return res.json();
+  // ── Phase 10: PoE OAuth ──
+  ipcMain.handle('poe:get-accounts', async () => {
+    return backend.getAccounts();
+  });
+
+  ipcMain.handle('poe:disconnect-account', async (_e, id: number) => {
+    return backend.disconnectAccount(id);
+  });
+
+  ipcMain.handle('poe:get-auth-url', async () => {
+    const { authUrl, state } = await backend.getAuthUrl();
+    shell.openExternal(authUrl);
+    return { authUrl, state };
+  });
+
+  ipcMain.handle('poe:complete-oauth', async (_e, code: string, state: string) => {
+    return backend.completeOAuth(code, state);
+  });
+
+  ipcMain.handle('poe:get-oauth-status', async () => {
+    return backend.getOAuthStatus();
+  });
+
+  ipcMain.handle('poe:fetch-oauth-characters', async () => {
+    return backend.fetchOAuthCharacters();
+  });
+
+  ipcMain.handle('poe:fetch-character-detail', async (_e, name: string) => {
+    return backend.getCharacterDetail(name);
+  });
+
+  ipcMain.handle('poe:analyze-character', async (_e, characterName: string) => {
+    const detail = await backend.getCharacterDetail(characterName);
+    const { build, modifiers, passiveTree } = convertCharacterToBuild(detail as any);
+
+    const analysisResult = await analysis.analyze({
+      build,
+      modifiers,
+    });
+
+    return {
+      import: {
+        buildSummary: {
+          name: (detail as any).character?.name ?? characterName,
+          ascendancy: build.character.ascendancy,
+          level: build.character.level,
+        },
+        modifierCount: modifiers.length,
+      },
+      analysis: {
+        offense: analysisResult.legacy.facts.offense,
+        defense: analysisResult.legacy.facts.defense,
+        scaling: analysisResult.legacy.facts.scaling,
+        problems: analysisResult.legacy.insights.problems.map((p) => ({
+          severity: p.severity,
+          message: p.message,
+          category: p.category,
+        })),
+        recommendations: analysisResult.legacy.insights.recommendations.map((r) => ({
+          itemSlot: r.itemSlot,
+          upgradePriority: r.upgradePriority,
+          targetStats: r.targetStats,
+          estimatedBudgetLow: r.estimatedBudgetLow,
+          estimatedBudgetHigh: r.estimatedBudgetHigh,
+          improvementPercent: r.improvementPercent,
+        })),
+        scores: analysisResult.legacy.scores,
+        metadata: analysisResult.legacy.metadata,
+      },
+      explanation: analysisResult.explanation
+        ? { summary: analysisResult.explanation.summary }
+        : null,
+      passiveTree,
+    };
   });
 }

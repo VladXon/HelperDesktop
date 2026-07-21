@@ -370,14 +370,16 @@ The user may write in Russian.
 |---|---|
 | `README.md` | Project overview, quick start, features |
 | `docs/architecture/ARCHITECTURE.md` | System diagram, stack, directory structure, key decisions |
-| `docs/database/DATABASE.md` | SQLite/Drizzle setup, common issues |
-| `docs/security/SECURITY.md` | Passwords, JWT, lockout, rate limiting, audit |
-| `docs/ui/UI_GUIDELINES.md` | Colors, typography, glassmorphism, components, design system |
-| `docs/deployment/DEPLOYMENT.md` | VPS, PM2, deploy/backup commands, git rules |
 | `docs/development/DEVELOPMENT.md` | Dev commands, env vars, production ops |
-| `docs/development/CODE_STANDARDS.md` | TS, React, Electron, backend, DB, testing, security standards |
-| `docs/development/TECH_DEBT.md` | Prioritized register of architecture, security, perf, testing issues |
-| `docs/roadmap/ROADMAP.md` | Project roadmap (placeholder) |
+| `docs/deployment/DEPLOYMENT.md` | VPS, PM2, deploy/backup commands, git rules |
+| `docs/api.md` | Server REST API + Electron IPC reference |
+| `docs/testing.md` | Test commands, environments, coverage gaps |
+| `docs/poe/phase1-core-engine.md` | PoE Analyzer architecture: engine, data pipeline, imports |
+| `docs/security/SECURITY.md` | Passwords, JWT, lockout, rate limiting, audit |
+| `docs/ui/UI_GUIDELINES.md` | Colors, typography, glassmorphism, components |
+| `docs/database/DATABASE.md` | SQLite/Drizzle setup, common issues |
+| `docs/development/CODE_STANDARDS.md` | TS, React, Electron, backend, DB, testing |
+| `docs/development/TECH_DEBT.md` | Prioritized register of issues |
 | `.agent/memory.md` | General project knowledge and system behavior |
 | `.agent/decisions.md` | Architectural decisions with context and rationale |
 | `.agent/progress.md` | Completed work, current tasks, backlog |
@@ -387,6 +389,36 @@ The user may write in Russian.
 | `.agent/roles/developer.md` | Developer role: implementation, tests |
 | `.agent/roles/reviewer.md` | Reviewer role: code review, security, performance |
 | `.agent/roles/debugger.md` | Debugger role: bug investigation, root cause analysis |
+
+---
+
+## Package Architecture
+
+```
+apps/client     → Electron desktop app (React + Vite)
+apps/server     → Express backend (VPS deployment)
+apps/bot        → Telegram bot (grammy)
+
+packages/shared     → Shared types, Zod schemas
+packages/poe-engine → Pure TS calculator (zero I/O, zero deps)
+packages/poe-data   → HTTP, parsers, data sources, AI providers
+packages/poe-backend→ Drizzle schema, repos, services, route factory
+```
+
+### Dependency Direction (strict)
+```
+renderer → preload → IPC → services/poe → packages/poe-*
+client → server API → PostgreSQL → poe-backend → poe-data → poe-engine
+shared ← poe-engine ← poe-data ← poe-backend
+```
+
+### Package Rules
+- **poe-engine**: No HTTP, no filesystem, no DB, no Electron, no Node APIs. Pure calculation only.
+- **poe-data**: May use HTTP, filesystem, Node APIs. Contains PoB import, data sources, AI providers.
+- **poe-backend**: Storage contracts, API contracts, repos. Peer-depends on `drizzle-orm` + `pg`.
+- **shared**: Types and schemas shared between all packages. No runtime dependencies.
+
+---
 
 ---
 

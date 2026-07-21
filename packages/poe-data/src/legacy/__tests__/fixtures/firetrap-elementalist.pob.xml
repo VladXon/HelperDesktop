@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PathOfBuilding>
+  <Build level="92" targetVersion="3_0" className="Elementalist" ascendClassName="Elementalist" bandit="kill-all">
+    <PlayerStat stat="Life" value="4800"/>
+    <PlayerStat stat="EnergyShield" value="1400"/>
+    <PlayerStat stat="Intelligence" value="350"/>
+  </Build>
+  <Skills>
+    <SkillSet id="1">
+      <Skill active="true" name="Fire Trap" level="20" quality="20" variant="regular"/>
+      <Skill active="false" name="Trap and Mine Damage" level="20" quality="20"/>
+      <Skill active="false" name="Elemental Focus" level="20" quality="20"/>
+      <Skill active="false" name="Burning Damage" level="20" quality="20"/>
+      <Skill active="false" name="Swift Assembly" level="20" quality="20"/>
+    </SkillSet>
+    <SkillSet id="2">
+      <Skill active="true" name="Righteous Fire" level="20" quality="20"/>
+      <Skill active="false" name="Elemental Focus" level="20" quality="20"/>
+      <Skill active="false" name="Burning Damage" level="20" quality="20"/>
+      <Skill active="false" name="Increased Area of Effect" level="20" quality="20"/>
+      <Skill active="false" name="Swift Affliction" level="20" quality="0"/>
+    </SkillSet>
+  </Skills>
+  <Items>
+    <Item id="Weapon 1">
+      <baseType>Opal Sceptre</baseType>
+      <rarity>rare</rarity>
+      <Mod text="+35% to fire damage over time multiplier" explicit="true"/>
+      <Mod text="+30% increased elemental damage with attack skills" explicit="true"/>
+      <Socket group="1" attr="R"/>
+      <Socket group="1" attr="R"/>
+      <Socket group="1" attr="R"/>
+    </Item>
+    <Item id="Helmet">
+      <baseType>Royal Burgonet</baseType>
+      <rarity>rare</rarity>
+      <Mod text="+89 to maximum life" explicit="true"/>
+      <Mod text="+80 to maximum energy shield" explicit="true"/>
+      <Mod text="+30% to fire resistance" explicit="true"/>
+      <Mod text="+35% to cold resistance" explicit="true"/>
+    </Item>
+    <Item id="Body Armour">
+      <baseType>Glorious Plate</baseType>
+      <rarity>rare</rarity>
+      <Mod text="+110 to maximum life" explicit="true"/>
+      <Mod text="+1200 to armour" explicit="true"/>
+      <Mod text="+28% to fire resistance" explicit="true"/>
+      <Mod text="+32% to lightning resistance" explicit="true"/>
+      <Socket group="1" attr="R"/>
+      <Socket group="1" attr="R"/>
+      <Socket group="1" attr="R"/>
+      <Socket group="1" attr="R"/>
+      <Socket group="1" attr="G"/>
+      <Socket group="1" attr="B"/>
+    </Item>
+    <Item id="Gloves">
+      <baseType>Sorcerer Gloves</baseType>
+      <rarity>rare</rarity>
+      <Mod text="+75 to maximum life" explicit="true"/>
+      <Mod text="+45 to maximum energy shield" explicit="true"/>
+      <Mod text="+25% to fire resistance" explicit="true"/>
+      <Mod text="+20% to cold resistance" explicit="true"/>
+    </Item>
+    <Item id="Boots">
+      <baseType>Sorcerer Boots</baseType>
+      <rarity>rare</rarity>
+      <Mod text="+70 to maximum life" explicit="true"/>
+      <Mod text="+40 to maximum energy shield" explicit="true"/>
+      <Mod text="+20% to movement speed" explicit="true"/>
+      <Mod text="+25% to lightning resistance" explicit="true"/>
+    </Item>
+    <Item id="Amulet">
+      <baseType>Citrine Amulet</baseType>
+      <rarity>rare</rarity>
+      <Mod text="+25 to intelligence" explicit="true"/>
+      <Mod text="+55 to maximum life" explicit="true"/>
+      <Mod text="+20% to fire resistance" explicit="true"/>
+      <Mod text="+15% to cold resistance" explicit="true"/>
+    </Item>
+    <Item id="Ring 1">
+      <baseType>Two-Stone Ring</baseType>
+      <rarity>rare</rarity>
+      <Mod text="+60 to maximum life" explicit="true"/>
+      <Mod text="+25% to fire resistance" explicit="true"/>
+      <Mod text="+20% to cold resistance" explicit="true"/>
+    </Item>
+    <Item id="Ring 2">
+      <baseType>Amethyst Ring</baseType>
+      <rarity>rare</rarity>
+      <Mod text="+50 to maximum life" explicit="true"/>
+      <Mod text="+25% to chaos resistance" explicit="true"/>
+      <Mod text="+20% to lightning resistance" explicit="true"/>
+    </Item>
+    <Item id="Belt">
+      <baseType>Stygian Vise</baseType>
+      <rarity>rare</rarity>
+      <Mod text="+80 to maximum life" explicit="true"/>
+      <Mod text="+20% to fire resistance" explicit="true"/>
+      <Mod text="+20% to cold resistance" explicit="true"/>
+      <Mod text="+25% to lightning resistance" explicit="true"/>
+    </Item>
+  </Items>
+  <Tree activeSpec="1">
+    <Spec treeVersion="3_25">AAQAAA==</Spec>
+  </Tree>
+  <Config>
+    <Input name="isTypeOfBoss" boolean="false"/>
+  </Config>
+</PathOfBuilding>

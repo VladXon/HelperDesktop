@@ -1,0 +1,35 @@
+{
+  "name": "@helper/poe-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PoE Analyzer persistence & backend services",
+  "type": "module",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./schema": "./dist/schema/poe.js",
+    "./repositories": "./dist/repositories/index.js",
+    "./services": "./dist/services/index.js",
+    "./api": "./dist/api/routes.js",
+    "./client": "./dist/client/backend-client.js",
+    "./crypto": "./dist/crypto/token-encryption.service.js",
+    "./types": "./dist/types.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@helper/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "drizzle-orm": "^0.45.0",
+    "typescript": "^5.8.0",
+    "vitest": "^2.1.0"
+  },
+  "peerDependencies": {
+    "drizzle-orm": "^0.45.0",
+    "pg": "^8.13.0"
+  }
+}
