@@ -11,7 +11,7 @@ export function PoeAssistantPage(): React.JSX.Element {
     <div className="flex flex-col h-full">
       <SessionPanel />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Tabs defaultValue="currency" className="flex flex-col h-full">
+        <Tabs defaultValue="characters" className="flex flex-col h-full">
           <div className="px-6 pt-3 border-b border-white/5">
             <TabsList className="bg-transparent gap-1">
               <TabsTrigger value="currency" className="data-[state=active]:bg-white/10 data-[state=active]:text-accent text-text-muted">

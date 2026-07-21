@@ -1,7 +1,12 @@
 import type { SessionStatus, ExchangeRateResult, ItemSearchResult } from './types';
 
 export async function setSession(poesessid: string): Promise<{ valid: boolean; accountName?: string }> {
-  return window.api.poe.setSession(poesessid);
+  try {
+    const result = await window.api.poe.connectSession(poesessid);
+    return { valid: result.connected, accountName: result.accountName };
+  } catch {
+    return { valid: false };
+  }
 }
 
 export async function getSession(): Promise<SessionStatus> {
