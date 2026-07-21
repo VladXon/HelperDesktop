@@ -73,6 +73,7 @@ export function createApp(): Express {
           auth: ['GET /url', 'GET /callback', 'GET /characters', 'GET /characters/:name', 'GET /status'],
           builds: ['POST /', 'GET /', 'GET /:hash', 'DELETE /:hash', 'POST /compare'],
           accounts: ['GET /', 'DELETE /:id'],
+          characters: ['GET /', 'GET /:id', 'POST /sync', 'POST /:id/refresh', 'GET /:id/snapshots'],
         },
       },
     });
