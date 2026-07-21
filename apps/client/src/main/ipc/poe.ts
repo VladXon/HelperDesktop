@@ -177,6 +177,10 @@ export function registerPoeIpc(): void {
     return backend.getCharacterDetail(name);
   });
 
+  ipcMain.handle('poe:connect-session', async (_e, poeSessionId: string) => {
+    return backend.connectSession(poeSessionId);
+  });
+
   ipcMain.handle('poe:analyze-character', async (_e, characterName: string) => {
     const detail = await backend.getCharacterDetail(characterName);
     const { build, modifiers, passiveTree } = convertCharacterToBuild(detail as any);

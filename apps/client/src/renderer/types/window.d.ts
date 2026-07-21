@@ -180,6 +180,7 @@ export interface ElectronApi {
     fetchOAuthCharacters: () => Promise<{ characters: Array<{ name: string; league: string; class: string; level: number }> }>;
     fetchCharacterDetail: (name: string) => Promise<Record<string, unknown>>;
     analyzeCharacter: (name: string) => Promise<unknown>;
+    connectSession: (poeSessionId: string) => Promise<{ connected: boolean; accountName: string; mode: string }>;
   };
 }
 

@@ -11,6 +11,7 @@ export const poeAccounts = pgTable(
     refreshTokenEncrypted: text('refresh_token_encrypted'),
     tokenExpiresAt: text('token_expires_at'),
     scopes: text('scopes').notNull().default(''),
+    authType: text('auth_type').default('oauth'),
     createdAt: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).notNull().defaultNow(),
   },

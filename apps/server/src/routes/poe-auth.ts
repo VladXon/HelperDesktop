@@ -2,15 +2,19 @@ import { Router } from 'express';
 import { getDb, schema } from '../db/index.js';
 import { eq } from 'drizzle-orm';
 import { requireAuth } from '../middleware/auth.js';
+import { config } from '../config.js';
 import {
   createAuthorizationUrl,
   handleCallback,
-  getCharacters,
+  getCharacters as getOAuthCharacters,
   getCharacterDetail,
   getConnectionStatus,
 } from '../services/poe/oauth/poe-oauth.service.js';
+import { createSessionAuthProvider, getSessionProviderCharacters } from '../services/poe/oauth/poe-session-auth.service.js';
 import { HttpError } from '../middleware/error-handler.js';
 import { log } from '../utils/logger.js';
+
+const sessionProvider = config.poeAuthMode === 'session' ? createSessionAuthProvider() : null;
 
 export function createPoeOauthRouter(): Router {
   const router = Router();
@@ -18,58 +22,73 @@ export function createPoeOauthRouter(): Router {
 
   router.get('/url', requireAuth, async (_req, res, next) => {
     try {
-      const user = (_req as { user?: { id: number } }).user;
-      if (!user) throw new HttpError(401, 'unauthorized', 'Authentication required');
+      if (config.poeAuthMode === 'session') {
+        res.json({
+          mode: 'session',
+          message: 'Use POST /api/poe/session/connect with your POESESSID',
+          connectEndpoint: '/api/poe/session/connect',
+        });
+        return;
+      }
 
       const { authUrl, state } = createAuthorizationUrl();
-
       await db.insert(schema.poeOauthStates).values({
         state,
-        userId: user.id,
+        userId: (_req as { user?: { id: number } }).user!.id,
         csrfToken: state,
         expiresAt: Math.floor(Date.now() / 1000) + 600,
         createdAt: new Date().toISOString(),
       });
-
-      res.json({ authUrl, state });
+      res.json({ authUrl, state, mode: 'oauth' });
     } catch (err) { next(err); }
   });
 
   router.get('/callback', async (req, res, next) => {
     try {
+      if (config.poeAuthMode === 'session') {
+        throw new HttpError(400, 'wrong_mode', 'Server is in session mode; use POST /api/poe/session/connect');
+      }
       const code = req.query.code as string | undefined;
       const state = req.query.state as string | undefined;
       if (!code || !state) throw new HttpError(400, 'missing_params', 'code and state are required');
-
-      const stateRows = await db.select().from(schema.poeOauthStates).where(eq(schema.poeOauthStates.state, state)).limit(1);
-      if (stateRows.length === 0) throw new HttpError(400, 'invalid_state', 'Invalid state');
-
-      const stateRow = stateRows[0]!;
-      const { accountName } = await handleCallback(code, state, stateRow.userId);
-
+      const rows = await db.select().from(schema.poeOauthStates).where(eq(schema.poeOauthStates.state, state)).limit(1);
+      if (rows.length === 0) throw new HttpError(400, 'invalid_state', 'Invalid state');
+      const { accountName } = await handleCallback(code, state, rows[0]!.userId);
       res.json({ connected: true, accountName });
+    } catch (err) { next(err); }
+  });
+
+  router.post('/session/connect', requireAuth, async (req, res, next) => {
+    try {
+      if (!sessionProvider) throw new HttpError(400, 'wrong_mode', 'Server is in OAuth mode');
+      const user = (req as { user?: { id: number } }).user!;
+      const poeSessionId = req.body?.poeSessionId as string | undefined;
+      if (!poeSessionId) throw new HttpError(400, 'missing_poesessid', 'poeSessionId is required');
+      const result = await sessionProvider.connect(user.id, { poeSessionId });
+      res.json({ connected: true, accountName: result.accountName, mode: 'session' });
     } catch (err) { next(err); }
   });
 
   router.get('/characters', requireAuth, async (req, res, next) => {
     try {
-      const user = (req as { user?: { id: number } }).user;
-      if (!user) throw new HttpError(401, 'unauthorized', 'Authentication required');
-
+      const user = (req as { user?: { id: number } }).user!;
       const accounts = await db.select().from(schema.poeAccounts).where(eq(schema.poeAccounts.userId, user.id));
       const active = accounts[0];
       if (!active) throw new HttpError(404, 'no_account', 'No PoE account connected');
 
-      const characters = await getCharacters(active.poeAccountId);
-      res.json(characters);
+      if (active.authType === 'session') {
+        const characters = await getSessionProviderCharacters(active.poeAccountId);
+        res.json(characters);
+      } else {
+        const characters = await getOAuthCharacters(active.poeAccountId);
+        res.json(characters);
+      }
     } catch (err) { next(err); }
   });
 
   router.get('/characters/:name', requireAuth, async (req, res, next) => {
     try {
-      const user = (req as { user?: { id: number } }).user;
-      if (!user) throw new HttpError(401, 'unauthorized', 'Authentication required');
-
+      const user = (req as { user?: { id: number } }).user!;
       const accounts = await db.select().from(schema.poeAccounts).where(eq(schema.poeAccounts.userId, user.id));
       const active = accounts[0];
       if (!active) throw new HttpError(404, 'no_account', 'No PoE account connected');
@@ -81,10 +100,19 @@ export function createPoeOauthRouter(): Router {
 
   router.get('/status', requireAuth, async (req, res, next) => {
     try {
-      const user = (req as { user?: { id: number } }).user;
-      if (!user) throw new HttpError(401, 'unauthorized', 'Authentication required');
+      const user = (req as { user?: { id: number } }).user!;
+      if (sessionProvider) {
+        const account = await sessionProvider.getAccount(user.id);
+        res.json({
+          connected: !!account,
+          accountName: account?.accountName ?? null,
+          authType: account?.authType ?? null,
+          mode: 'session',
+        });
+        return;
+      }
       const status = await getConnectionStatus(user.id);
-      res.json(status);
+      res.json({ ...status, mode: 'oauth' });
     } catch (err) { next(err); }
   });
 

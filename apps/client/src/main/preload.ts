@@ -115,6 +115,7 @@ const api = {
     fetchOAuthCharacters: () => invoke<{ characters: Array<{ name: string; league: string; class: string; level: number }> }>('poe:fetch-oauth-characters'),
     fetchCharacterDetail: (name: string) => invoke<Record<string, unknown>>('poe:fetch-character-detail', name),
     analyzeCharacter: (name: string) => invoke<unknown>('poe:analyze-character', name),
+    connectSession: (poeSessionId: string) => invoke<{ connected: boolean; accountName: string; mode: string }>('poe:connect-session', poeSessionId),
   },
 };
 

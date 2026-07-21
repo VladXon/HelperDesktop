@@ -19,6 +19,7 @@ export function createPoeAccountsRouter(): Router {
       const accounts = await db.select({
         id: schema.poeAccounts.id,
         accountName: schema.poeAccounts.accountName,
+        authType: schema.poeAccounts.authType,
         createdAt: schema.poeAccounts.createdAt,
       }).from(schema.poeAccounts).where(eq(schema.poeAccounts.userId, user.id));
 

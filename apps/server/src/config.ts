@@ -42,6 +42,7 @@ const envSchema = z
     POE_CLIENT_SECRET: z.string().default(''),
     POE_REDIRECT_URI: z.string().default(''),
     POE_TOKEN_ENCRYPTION_KEY: z.string().default(''),
+    POE_AUTH_MODE: z.enum(['oauth', 'session']).default('oauth'),
   })
   .transform((env) => {
     const isProd = env.NODE_ENV === 'production';
@@ -82,6 +83,7 @@ const envSchema = z
       poeClientSecret: env.POE_CLIENT_SECRET,
       poeRedirectUri: env.POE_REDIRECT_URI,
       poeEncryptionKey: env.POE_TOKEN_ENCRYPTION_KEY,
+      poeAuthMode: env.POE_AUTH_MODE,
       warnings,
     };
   });
