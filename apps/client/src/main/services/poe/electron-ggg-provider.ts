@@ -58,6 +58,8 @@ interface GggApiResponse<T> {
   data?: T;
   status?: number;
   error?: string;
+  isJson?: boolean;
+  isHtml?: boolean;
 }
 
 function createGggWindow(): BrowserWindow {
@@ -74,12 +76,15 @@ function createGggWindow(): BrowserWindow {
   return win;
 }
 
-function makeGggError(status: number, bodyText: string): Error {
+function makeGggError(status: number, bodyText: string, isHtml?: boolean): Error {
   if (status === 429) {
-    if (bodyText.includes('Just a moment') || bodyText.includes('challenge') || bodyText.includes('cf-browser')) {
-      return Object.assign(new Error('Cloudflare challenge — try again in a moment'), { code: 'rate_limited', retryAfter: 5 });
+    if (isHtml || bodyText.includes('Just a moment') || bodyText.includes('challenge') || bodyText.includes('cf-browser')) {
+      return Object.assign(new Error('Cloudflare challenge — retrying...'), { code: 'rate_limited', retryAfter: 5 });
     }
-    return Object.assign(new Error('GGG rate limit exceeded — retry after 60s'), { code: 'rate_limited', retryAfter: 60 });
+    return Object.assign(new Error('GGG rate limit — wait 60s before retrying'), { code: 'rate_limited', retryAfter: 60 });
+  }
+  if (isHtml && (status === 503 || status === 403)) {
+    return Object.assign(new Error('Cloudflare block — unable to reach GGG API'), { code: 'ggg_unavailable' });
   }
   if (status === 401 || status === 403) {
     return Object.assign(new Error('PoE session expired — reconnect your Path of Exile account'), { code: 'session_expired' });
@@ -96,38 +101,60 @@ async function fetchViaWindow<T>(path: string, poesessid: string): Promise<T> {
 
   try {
     await win.loadURL(`${GGG_BASE}/login`);
-    await new Promise((resolve) => setTimeout(resolve, 3000));
 
-    const cookieScript = `
-      document.cookie = 'POESESSID=${poesessid}; path=/; domain=.pathofexile.com; Secure; SameSite=Lax';
-    `;
-    await win.webContents.executeJavaScript(cookieScript);
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => resolve(), 15000);
+      win.webContents.on('did-finish-load', () => {
+        clearTimeout(timeout);
+        resolve();
+      });
+      win.webContents.on('did-fail-load', (_e, code, desc) => {
+        clearTimeout(timeout);
+        reject(new Error(`Page load failed: ${code} ${desc}`));
+      });
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    await win.webContents.session.cookies.set({
+      url: GGG_BASE,
+      name: 'POESESSID',
+      value: poesessid,
+      domain: '.pathofexile.com',
+      path: '/',
+      secure: true,
+      sameSite: 'lax',
+    });
 
     const fetchScript = `
       (async () => {
         try {
           const res = await fetch(${JSON.stringify(url)}, {
             headers: { 'Accept': 'application/json' },
+            credentials: 'include',
           });
+          const contentType = res.headers.get('content-type') || '';
+          const isJson = contentType.includes('application/json');
           const text = await res.text();
           let data;
-          try { data = JSON.parse(text); } catch { data = null; }
-          return { success: true, data, status: res.status };
+          if (isJson) { try { data = JSON.parse(text); } catch { data = text.substring(0, 200); } }
+          else { data = text.substring(0, 200); }
+          return { success: true, data, status: res.status, isJson, isHtml: contentType.includes('text/html') };
         } catch (e) {
           return { success: false, error: String(e) };
         }
       })()
     `;
 
-    const result: GggApiResponse<T> = await win.webContents.executeJavaScript(fetchScript);
+    const result: GggApiResponse<T & { isJson?: boolean; isHtml?: boolean }> = await win.webContents.executeJavaScript(fetchScript);
 
     if (!result.success) {
       throw new Error(`GGG API call failed: ${result.error}`);
     }
 
     if (result.status && result.status !== 200) {
-      const bodyText = JSON.stringify(result.data ?? '');
-      throw makeGggError(result.status, bodyText);
+      const bodyText = typeof result.data === 'string' ? result.data : JSON.stringify(result.data ?? '');
+      throw makeGggError(result.status, bodyText, !!(result as any).isHtml);
     }
 
     return result.data as T;
