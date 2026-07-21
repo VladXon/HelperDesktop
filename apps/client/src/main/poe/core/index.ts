@@ -7,9 +7,6 @@ export { analyze } from './engine/analyzer.engine.js';
 export { explainProblem, explainRecommendation, buildRecommendationList } from './explanation/index.js';
 export type { ProblemExplanation } from './explanation/index.js';
 
-export { importFromPobUrl, importFromPobXml } from './adapters/pob.adapter.js';
-export type { PoBImportOptions } from './adapters/pob.adapter.js';
-
 export { parsePobXml, parsePobPastebin, isPobPastebinUrl, extractPastebinId } from './parsers/pob-xml.parser.js';
 export type { PoBXmlDTO, PoBBuildAttributes, PoBSkill, PoBSkillSet, PoBMod, PoBSocket, PoBItem, PoBTree, PoBConfig } from './dto/pob-xml.dto.js';
 
