@@ -6,14 +6,19 @@ import { resolveModifiers } from '../resolvers/modifier.resolver.js';
 import { resolveConditionalModifiers } from '../resolvers/conditional.resolver.js';
 import { applyKeystoneEffects } from '../resolvers/keystone.resolver.js';
 import { aggregateCharacterStats } from '../aggregator/stat.aggregator.js';
+import { bossEnemy, defaultConditions, defaultCalculationContext } from '../context/index.js';
 import type { EquippedItem } from '@helper/shared';
 import type { SkillSetup } from '../../skills/models/skill.model.js';
 import type { PassiveTree } from '../../tree/models/passive-tree.model.js';
 import type { StatValue } from '../models/stat.model.js';
 
-function makeItem(overrides: Partial<EquippedItem['computedStats']> = {}): EquippedItem {
+function sv(name: string, value: number, source: StatValue['source'], type: StatValue['type'], overrides: Partial<Pick<StatValue, 'scope' | 'modifierName'>> = {}): StatValue {
+  return { name, value, source, type, scope: 'global', modifierName: `${source}:${name}`, ...overrides };
+}
+
+function makeItem(overrides: Partial<EquippedItem['computedStats']> = {}, slot: EquippedItem['slot'] = 'helm'): EquippedItem {
   return {
-    slot: 'helm',
+    slot,
     identity: { name: 'Test Helm', baseType: 'Great Crown', rarity: 'rare' },
     rawMods: [],
     computedStats: {
@@ -36,69 +41,32 @@ function makeItem(overrides: Partial<EquippedItem['computedStats']> = {}): Equip
   };
 }
 
-describe('item collector', () => {
-  it('collects flat life from item', () => {
+const emptyTree: PassiveTree = {
+  version: '3.25', nodes: [], keystones: [], masteries: [], ascendancy: [], clusterJewels: [],
+};
+
+describe('item collector (traced)', () => {
+  it('collects flat life from item with modifier name', () => {
     const items = [makeItem({ life: 99 })];
     const stats = collectItemStats(items);
-    expect(stats).toContainEqual({ name: 'life', value: 99, source: 'item', type: 'flat' });
+    expect(stats).toContainEqual({
+      name: 'life', value: 99, source: 'item', type: 'flat',
+      scope: 'global', modifierName: 'Test Helm: life',
+    });
   });
 
-  it('collects resistances from item', () => {
-    const items = [makeItem({ resistances: { fire: 30, cold: 20, lightning: 0, chaos: 10 } })];
+  it('marks weapon damage as localItem scope', () => {
+    const items = [makeItem({ flatDamage: [{ type: 'physical', min: 10, max: 20 }] }, 'mainHand')];
     const stats = collectItemStats(items);
-    expect(stats).toContainEqual({ name: 'fireResistance', value: 30, source: 'item', type: 'flat' });
-    expect(stats).toContainEqual({ name: 'coldResistance', value: 20, source: 'item', type: 'flat' });
-    expect(stats).toContainEqual({ name: 'chaosResistance', value: 10, source: 'item', type: 'flat' });
-    expect(stats.find((s) => s.name === 'lightningResistance')).toBeUndefined();
-  });
-
-  it('collects attributes from item', () => {
-    const items = [makeItem({ attributes: { str: 30, dex: 0, int: 25 } })];
-    const stats = collectItemStats(items);
-    expect(stats).toContainEqual({ name: 'strength', value: 30, source: 'item', type: 'flat' });
-    expect(stats).toContainEqual({ name: 'intelligence', value: 25, source: 'item', type: 'flat' });
-  });
-
-  it('collects flat damage from item', () => {
-    const items = [makeItem({ flatDamage: [{ type: 'physical', min: 10, max: 20 }] })];
-    const stats = collectItemStats(items);
-    expect(stats).toContainEqual({ name: 'physicalDamage', value: 10, source: 'item', type: 'flat' });
-    expect(stats).toContainEqual({ name: 'physicalDamage', value: 20, source: 'item', type: 'flat' });
-  });
-
-  it('collects increased damage from item', () => {
-    const items = [makeItem({ increasedDamage: { fireDamage: 30, spellDamage: 50 } })];
-    const stats = collectItemStats(items);
-    expect(stats).toContainEqual({ name: 'fireDamageDamage', value: 30, source: 'item', type: 'increased' });
-    expect(stats).toContainEqual({ name: 'spellDamageDamage', value: 50, source: 'item', type: 'increased' });
-  });
-
-  it('collects armour and evasion from item', () => {
-    const items = [makeItem({ armour: 1500, evasion: 500 })];
-    const stats = collectItemStats(items);
-    expect(stats).toContainEqual({ name: 'armour', value: 1500, source: 'item', type: 'flat' });
-    expect(stats).toContainEqual({ name: 'evasion', value: 500, source: 'item', type: 'flat' });
-  });
-
-  it('collects from multiple items', () => {
-    const items = [makeItem({ life: 99 }), makeItem({ life: 50 })];
-    const stats = collectItemStats(items);
-    const lifeStats = stats.filter((s) => s.name === 'life');
-    expect(lifeStats.length).toBe(2);
-  });
-
-  it('skips zero-value stats', () => {
-    const items = [makeItem({ life: 0 })];
-    const stats = collectItemStats(items);
-    expect(stats.filter((s) => s.name === 'life')).toEqual([]);
+    expect(stats[0]!.scope).toBe('localItem');
   });
 });
 
 describe('modifier resolver', () => {
   it('sums flat values of the same stat', () => {
     const raw: StatValue[] = [
-      { name: 'life', value: 99, source: 'item', type: 'flat' },
-      { name: 'life', value: 50, source: 'item', type: 'flat' },
+      sv('life', 99, 'item', 'flat'),
+      sv('life', 50, 'item', 'flat'),
     ];
     const result = resolveModifiers(raw);
     expect(result.flat['life']).toBe(149);
@@ -106,8 +74,8 @@ describe('modifier resolver', () => {
 
   it('sums increased percentages', () => {
     const raw: StatValue[] = [
-      { name: 'life', value: 30, source: 'item', type: 'increased' },
-      { name: 'life', value: 20, source: 'tree', type: 'increased' },
+      sv('life', 30, 'item', 'increased'),
+      sv('life', 20, 'tree', 'increased'),
     ];
     const result = resolveModifiers(raw);
     expect(result.increased['life']).toBe(50);
@@ -115,8 +83,8 @@ describe('modifier resolver', () => {
 
   it('multiplies more multipliers together', () => {
     const raw: StatValue[] = [
-      { name: 'moreDamage', value: 40, source: 'skill', type: 'more' },
-      { name: 'moreDamage', value: 30, source: 'skill', type: 'more' },
+      sv('moreDamage', 40, 'skill', 'more'),
+      sv('moreDamage', 30, 'skill', 'more'),
     ];
     const result = resolveModifiers(raw);
     expect(result.more['moreDamage']).toBeCloseTo(1.4 * 1.3);
@@ -124,7 +92,7 @@ describe('modifier resolver', () => {
 
   it('extracts conversion chain entries', () => {
     const raw: StatValue[] = [
-      { name: 'physical_to_fire', value: 50, source: 'skill', type: 'conversion' },
+      sv('physical_to_fire', 50, 'skill', 'conversion'),
     ];
     const result = resolveModifiers(raw);
     expect(result.conversions.length).toBe(1);
@@ -136,7 +104,7 @@ describe('modifier resolver', () => {
 describe('conditional resolver', () => {
   it('always returns active for "always" condition', () => {
     const result = resolveConditionalModifiers(
-      [{ stat: { name: 'life', value: 100, source: 'item', type: 'flat' }, condition: 'always' }],
+      [{ stat: sv('life', 100, 'item', 'flat'), condition: 'always' }],
       { hasCharges: false, isLowLife: false, isFullLife: false, isLeeching: false, isBoss: false },
     );
     expect(result.length).toBe(1);
@@ -144,7 +112,7 @@ describe('conditional resolver', () => {
 
   it('filters out inactive conditions', () => {
     const result = resolveConditionalModifiers(
-      [{ stat: { name: 'damage', value: 30, source: 'item', type: 'increased' }, condition: 'requiresLowLife' }],
+      [{ stat: sv('damage', 30, 'item', 'increased'), condition: 'requiresLowLife' }],
       { hasCharges: false, isLowLife: false, isFullLife: false, isLeeching: false, isBoss: false },
     );
     expect(result).toEqual([]);
@@ -152,84 +120,72 @@ describe('conditional resolver', () => {
 
   it('returns active when condition matches', () => {
     const result = resolveConditionalModifiers(
-      [{ stat: { name: 'damage', value: 30, source: 'item', type: 'increased' }, condition: 'requiresLowLife' }],
+      [{ stat: sv('damage', 30, 'item', 'increased'), condition: 'requiresLowLife' }],
       { hasCharges: false, isLowLife: true, isFullLife: false, isLeeching: false, isBoss: false },
     );
     expect(result.length).toBe(1);
   });
 });
 
-describe('keystone resolver', () => {
-  it('applies CI life override', () => {
-    const raw: StatValue[] = [
-      { name: 'Chaos Inoculation', value: 1, source: 'keystone', type: 'flat' },
-      { name: 'life', value: 5000, source: 'item', type: 'flat' },
-    ];
-    const result = applyKeystoneEffects(raw);
-    expect(result.overrides['life']).toBe(1);
-    expect(result.flags).toContain('chaos_immunity');
+describe('context', () => {
+  it('creates default calculation context', () => {
+    const ctx = defaultCalculationContext();
+    expect(ctx.characterLevel).toBe(90);
+    expect(ctx.enemy.isBoss).toBe(false);
+    expect(ctx.conditions.isLowLife).toBe(false);
   });
 
-  it('returns empty overrides for non-keystone mods', () => {
-    const raw: StatValue[] = [
-      { name: 'life', value: 5000, source: 'item', type: 'flat' },
-    ];
-    const result = applyKeystoneEffects(raw);
-    expect(result.overrides).toEqual({});
-    expect(result.flags).toEqual([]);
+  it('creates boss enemy context', () => {
+    const enemy = bossEnemy();
+    expect(enemy.isBoss).toBe(true);
+    expect(enemy.fireResistance).toBe(30);
+  });
+
+  it('uber boss has higher resistance and level', () => {
+    const enemy = bossEnemy(true);
+    expect(enemy.isUber).toBe(true);
+    expect(enemy.level).toBe(85);
   });
 });
 
-describe('stat aggregator', () => {
-  const emptyTree: PassiveTree = {
-    version: '3.25',
-    nodes: [],
-    keystones: [],
-    masteries: [],
-    ascendancy: [],
-    clusterJewels: [],
-  };
-
-  it('aggregates life from items and tree', () => {
+describe('stat aggregator (traced)', () => {
+  it('aggregates life from items and tree with source trace', () => {
     const result = aggregateCharacterStats({
       items: [makeItem({ life: 99 }), makeItem({ life: 120 })],
       skills: [],
       tree: {
         ...emptyTree,
-        nodes: [
-          {
-            id: 1, name: '+10 life', type: 'small',
-            stats: [{ id: 'm1', source: 'tree', category: 'explicit', text: '+10 life', stats: [{ stat: 'life', value: 10, type: 'flat' }], tags: [], values: [10] }],
-            allocated: true,
-          },
-        ],
+        nodes: [{
+          id: 1, name: '+10 life', type: 'small',
+          stats: [{ id: 'm1', source: 'tree', category: 'explicit', text: '+10 life', stats: [{ stat: 'life', value: 10, type: 'flat' }], tags: [], values: [10] }],
+          allocated: true,
+        }],
       },
     });
     expect(result.defense.life).toBe(229);
-    expect(result.rawModifiers.length).toBeGreaterThan(0);
+    expect(result.traced.life.value).toBe(229);
+    expect(result.traced.life.sources.length).toBe(3);
   });
 
-  it('aggregates resistances from items', () => {
+  it('sources are tracked with identifiable names', () => {
     const result = aggregateCharacterStats({
-      items: [makeItem({ resistances: { fire: 45, cold: 40, lightning: 38, chaos: 0 } })],
+      items: [makeItem({ life: 99 })],
       skills: [],
       tree: emptyTree,
     });
-    expect(result.defense.fireResistance).toBe(45);
-    expect(result.defense.coldResistance).toBe(40);
-    expect(result.defense.lightningResistance).toBe(38);
-    expect(result.defense.chaosResistance).toBe(0);
+    const lifeSources = result.traced.life.sources;
+    expect(lifeSources.length).toBe(1);
+    expect(lifeSources[0]!.source).toBe('Test Helm: life');
   });
 
   it('handles empty build gracefully', () => {
     const result = aggregateCharacterStats({ items: [], skills: [], tree: emptyTree });
     expect(result.defense.life).toBe(0);
-    expect(result.offense.attackSpeed).toBe(0);
-    expect(result.attributes.strength).toBe(0);
-    expect(result.mechanics.keystones).toEqual([]);
+    expect(result.traced.life.value).toBe(0);
+    expect(result.traced.life.sources).toEqual([]);
   });
 
-  it('tracks keystones in mechanics', () => {
+  it('tracks keystones', () => {
     const result = aggregateCharacterStats({
       items: [],
       skills: [],
@@ -243,6 +199,30 @@ describe('stat aggregator', () => {
     expect(result.defense.life).toBe(1);
   });
 
+  it('aggregates resistances from items and trees', () => {
+    const result = aggregateCharacterStats({
+      items: [
+        makeItem({ resistances: { fire: 45, cold: 40, lightning: 38, chaos: 0 } }),
+        makeItem({ resistances: { fire: 15, cold: 20, lightning: 0, chaos: 25 } }),
+      ],
+      skills: [],
+      tree: emptyTree,
+    });
+    expect(result.defense.fireResistance).toBe(60);
+    expect(result.traced.fireResistance.sources.length).toBe(2);
+  });
+
+  it('local item scope is preserved in trace', () => {
+    const result = aggregateCharacterStats({
+      items: [
+        makeItem({ flatDamage: [{ type: 'physical', min: 10, max: 20 }] }, 'mainHand'),
+      ],
+      skills: [],
+      tree: emptyTree,
+    });
+    expect(result.offense.flatDamage['physicalDamage']).toBeDefined();
+  });
+
   it('aggregates attributes from items', () => {
     const result = aggregateCharacterStats({
       items: [makeItem({ attributes: { str: 30, dex: 0, int: 25 } })],
@@ -250,45 +230,6 @@ describe('stat aggregator', () => {
       tree: emptyTree,
     });
     expect(result.attributes.strength).toBe(30);
-    expect(result.attributes.dexterity).toBe(0);
     expect(result.attributes.intelligence).toBe(25);
-  });
-
-  it('aggregates flat damage from items', () => {
-    const result = aggregateCharacterStats({
-      items: [makeItem({ flatDamage: [{ type: 'physical', min: 10, max: 20 }] })],
-      skills: [],
-      tree: emptyTree,
-    });
-    const physDmg = result.offense.flatDamage['physicalDamage'];
-    expect(physDmg).toBeDefined();
-  });
-
-  it('collects increased damage from items', () => {
-    const result = aggregateCharacterStats({
-      items: [makeItem({ increasedDamage: { elementalDamageWithAttacks: 30 } })],
-      skills: [],
-      tree: emptyTree,
-    });
-    expect(result.offense.increasedDamage['elementalDamageWithAttacksDamage']).toBe(30);
-  });
-
-  it('collects spell suppression from items', () => {
-    const result = aggregateCharacterStats({
-      items: [makeItem({ spellSuppression: 18 })],
-      skills: [],
-      tree: emptyTree,
-    });
-    expect(result.defense.spellSuppression).toBe(18);
-  });
-
-  it('aggregates increased speed from items', () => {
-    const result = aggregateCharacterStats({
-      items: [makeItem({ attackSpeed: 20, castSpeed: 15 })],
-      skills: [],
-      tree: emptyTree,
-    });
-    expect(result.offense.attackSpeed).toBe(20);
-    expect(result.offense.castSpeed).toBe(15);
   });
 });

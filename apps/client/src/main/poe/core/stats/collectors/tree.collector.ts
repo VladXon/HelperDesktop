@@ -13,6 +13,8 @@ export function collectTreeStats(tree: PassiveTree): StatValue[] {
           value: s.value,
           source: 'tree',
           type: statTypeToValueType(s.type),
+          scope: 'global',
+          modifierName: `tree: ${node.name}`,
         });
       }
     }
@@ -25,6 +27,8 @@ export function collectTreeStats(tree: PassiveTree): StatValue[] {
         value: s.value,
         source: 'mastery',
         type: statTypeToValueType(s.type),
+        scope: 'global',
+        modifierName: `mastery: ${mastery.text}`,
       });
     }
   }
@@ -35,6 +39,8 @@ export function collectTreeStats(tree: PassiveTree): StatValue[] {
       value: 1,
       source: 'keystone',
       type: 'flat',
+      scope: 'global',
+      modifierName: `keystone: ${keystone.name}`,
     });
   }
 
@@ -45,6 +51,8 @@ export function collectTreeStats(tree: PassiveTree): StatValue[] {
         value: 1,
         source: 'ascendancy',
         type: 'flat',
+        scope: 'global',
+        modifierName: `ascendancy: ${asc.name}`,
       });
     }
   }

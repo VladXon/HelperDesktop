@@ -4,26 +4,42 @@ import { calculateSupportMultiplier } from '../../skills/resolvers/support-gem.r
 
 export function collectSkillStats(setups: SkillSetup[]): StatValue[] {
   const result: StatValue[] = [];
-  const src: StatValue['source'] = 'skill';
 
   for (const setup of setups) {
     if (!setup.activeSkill) continue;
 
+    const skillName = setup.activeSkill.name;
     const { more, increased } = calculateSupportMultiplier(setup.supports);
 
     if (more > 0) {
-      result.push({ name: 'moreDamage', value: more, source: src, type: 'more' });
+      result.push({
+        name: 'moreDamage',
+        value: more,
+        source: 'skill',
+        type: 'more',
+        scope: 'skill',
+        modifierName: `${skillName} supports`,
+      });
     }
     if (increased > 0) {
-      result.push({ name: 'increasedDamage', value: increased, source: src, type: 'increased' });
+      result.push({
+        name: 'increasedDamage',
+        value: increased,
+        source: 'skill',
+        type: 'increased',
+        scope: 'skill',
+        modifierName: `${skillName} supports`,
+      });
     }
 
     for (const rule of setup.activeSkill.conversion) {
       result.push({
         name: `${rule.from}_to_${rule.to}`,
         value: rule.percent,
-        source: src,
+        source: 'skill',
         type: 'conversion',
+        scope: 'skill',
+        modifierName: `${skillName}: ${rule.kind}`,
       });
     }
   }

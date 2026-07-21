@@ -1,4 +1,4 @@
-import type { StatValue } from './stat.model.js';
+import type { StatValue, TracedStat } from './stat.model.js';
 
 export interface DefenseStats {
   life: number;
@@ -22,6 +22,22 @@ export interface DefenseStats {
   evasionIncreased: number;
   energyShieldIncreased: number;
   lifeIncreased: number;
+}
+
+export interface TracedDefenseStats {
+  life: TracedStat;
+  energyShield: TracedStat;
+  mana: TracedStat;
+  armour: TracedStat;
+  evasion: TracedStat;
+  fireResistance: TracedStat;
+  coldResistance: TracedStat;
+  lightningResistance: TracedStat;
+  chaosResistance: TracedStat;
+  attackBlock: TracedStat;
+  spellBlock: TracedStat;
+  lifeRegen: TracedStat;
+  spellSuppression: TracedStat;
 }
 
 export interface OffenseStats {
@@ -59,6 +75,7 @@ export interface ResolvedCharacterStats {
   mechanics: MechanicsState;
   attributes: AttributeStats;
   rawModifiers: StatValue[];
+  traced: TracedDefenseStats;
 }
 
 export function emptyDefense(): DefenseStats {

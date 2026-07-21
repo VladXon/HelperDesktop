@@ -1,6 +1,7 @@
-import type { ResolvedCharacterStats } from '../models/character-stats.model.js';
+import type { ResolvedCharacterStats, TracedDefenseStats } from '../models/character-stats.model.js';
 import { emptyDefense, emptyOffense, emptyMechanics, emptyAttributes } from '../models/character-stats.model.js';
 import type { StatValue } from '../models/stat.model.js';
+import { makeTracedStat, addToTracedStat } from '../models/stat.model.js';
 import type { EquippedItem } from '@helper/shared';
 import type { SkillSetup } from '../../skills/models/skill.model.js';
 import type { PassiveTree } from '../../tree/models/passive-tree.model.js';
@@ -10,11 +11,47 @@ import { collectTreeStats } from '../collectors/tree.collector.js';
 import { resolveModifiers } from '../resolvers/modifier.resolver.js';
 import { applyKeystoneEffects } from '../resolvers/keystone.resolver.js';
 
+/**
+ * Calculation Pipeline:
+ *
+ *   Items + Skills + Tree
+ *        │
+ *        ▼
+ *   Collectors  →  StatValue[] (raw, flat)
+ *        │
+ *        ▼
+ *   resolveModifiers  →  { flat, increased, more, conversions }
+ *        │
+ *        ├── Base stats ────→ applyIncreased() ──→ applyMore()
+ *        │
+ *        ├── Conversions ──→ Enemy mitigation (penetration, resistance)
+ *        │
+ *        └── Keystone overrides (CI, MoM, EB)
+ *        │
+ *        ▼
+ *   ResolvedCharacterStats { defense, offense, mechanics, attributes, traced }
+ *
+ * Pipeline stages (for calculators, Phase 3f):
+ *   1. Base     — flat values from gear, tree, character
+ *   2. Flat     — sum of all additive flat stats
+ *   3. Conversion — phys→light→cold→fire→chaos
+ *   4. Increased — sum all % increased modifiers
+ *   5. More     — multiply all more multipliers
+ *   6. Crit     — apply crit chance + multi
+ *   7. Enemy mitigation — resistances, armour reduction, boss penalties
+ */
+
 export interface AggregatorInput {
   items: EquippedItem[];
   skills: SkillSetup[];
   tree: PassiveTree;
 }
+
+const TRACED_STAT_NAMES = [
+  'life', 'energyShield', 'mana', 'armour', 'evasion',
+  'fireResistance', 'coldResistance', 'lightningResistance', 'chaosResistance',
+  'attackBlock', 'spellBlock', 'lifeRegen', 'spellSuppression',
+];
 
 export function aggregateCharacterStats(input: AggregatorInput): ResolvedCharacterStats {
   const allRaw: StatValue[] = [
@@ -30,8 +67,9 @@ export function aggregateCharacterStats(input: AggregatorInput): ResolvedCharact
   const offense = buildOffense(resolved);
   const mechanics = buildMechanics(resolved, keystoneResult);
   const attributes = buildAttributes(resolved);
+  const traced = buildTracedStats(allRaw);
 
-  return { defense, offense, mechanics, attributes, rawModifiers: allRaw };
+  return { defense, offense, mechanics, attributes, rawModifiers: allRaw, traced };
 }
 
 function buildDefense(
@@ -71,6 +109,26 @@ function buildDefense(
   }
 
   return def;
+}
+
+function buildTracedStats(allRaw: StatValue[]): TracedDefenseStats {
+  const traced: Record<string, ReturnType<typeof makeTracedStat>> = {};
+  for (const name of TRACED_STAT_NAMES) {
+    traced[name] = makeTracedStat();
+  }
+
+  for (const sv of allRaw) {
+    if (sv.type === 'flat' && TRACED_STAT_NAMES.includes(sv.name)) {
+      addToTracedStat(traced[sv.name]!, {
+        source: sv.modifierName || sv.source,
+        value: sv.value,
+        type: sv.type,
+        scope: sv.scope,
+      });
+    }
+  }
+
+  return traced as unknown as TracedDefenseStats;
 }
 
 function buildOffense(r: ReturnType<typeof resolveModifiers>): ResolvedCharacterStats['offense'] {
