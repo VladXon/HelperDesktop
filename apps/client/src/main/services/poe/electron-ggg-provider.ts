@@ -58,8 +58,9 @@ async function gggFetch<T>(path: string, poesessid: string): Promise<T> {
 
   const res = await net.fetch(url, {
     headers: {
-      'User-Agent': 'HelperDesktop/1.0',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
       'Cookie': `POESESSID=${poesessid}`,
+      'Accept': 'application/json, text/plain, */*',
     },
   });
 
@@ -90,20 +91,25 @@ export function createElectronGggProvider() {
   return {
     async getAccountName(poesessid: string): Promise<string> {
       console.log('[ggg:electron] getAccountName', maskSessionId(poesessid));
-      const data = await gggFetch<{ name?: string }>('/character-window/get-account-name', poesessid);
+      const data = await gggFetch<{ name?: string }>('/api/profile', poesessid);
       if (!data?.name) throw Object.assign(new Error('Could not validate POESESSID — no account name returned'), { code: 'session_invalid' });
       return data.name;
     },
 
-    async getCharacters(poesessid: string): Promise<GggCharacter[]> {
+    async getCharacters(poesessid: string, accountName?: string): Promise<GggCharacter[]> {
       console.log('[ggg:electron] getCharacters', maskSessionId(poesessid));
-      const data = await gggFetch<GggCharacter[]>('/character-window/get-characters', poesessid);
+      const query = accountName ? `?accountName=${encodeURIComponent(accountName)}` : '';
+      const data = await gggFetch<GggCharacter[]>(`/character-window/get-characters${query}`, poesessid);
       return data ?? [];
     },
 
-    async getCharacterDetail(poesessid: string, characterName: string): Promise<GggCharacterDetail> {
+    async getCharacterDetail(poesessid: string, characterName: string, accountName?: string): Promise<GggCharacterDetail> {
       console.log('[ggg:electron] getCharacterDetail', maskSessionId(poesessid), characterName);
-      return gggFetch<GggCharacterDetail>(`/character-window/get-items?character=${encodeURIComponent(characterName)}`, poesessid);
+      const query = [
+        `character=${encodeURIComponent(characterName)}`,
+        accountName ? `accountName=${encodeURIComponent(accountName)}` : '',
+      ].filter(Boolean).join('&');
+      return gggFetch<GggCharacterDetail>(`/character-window/get-items?${query}`, poesessid);
     },
   };
 }
