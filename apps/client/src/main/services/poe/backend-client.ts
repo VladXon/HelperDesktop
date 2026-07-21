@@ -104,10 +104,10 @@ export function getCharacterDetail(name: string) {
   return apiFetch<Record<string, unknown>>(`/api/poe/auth/characters/${encodeURIComponent(name)}`);
 }
 
-export function connectSession(poeSessionId: string) {
+export function connectSession(poeSessionId: string, accountName?: string) {
   return apiFetch<{ connected: boolean; accountName: string; mode: string }>('/api/poe/auth/session/connect', {
     method: 'POST',
-    body: { poeSessionId },
+    body: { poeSessionId, ...(accountName ? { accountName } : {}) },
   });
 }
 

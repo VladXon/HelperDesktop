@@ -7,6 +7,7 @@ import { convertCharacterToBuild } from '../services/poe/poe-character.service.j
 import { createModDB } from '@helper/poe-engine';
 import type { ModDB } from '@helper/poe-engine';
 import * as backend from '../services/poe/backend-client.js';
+import { createElectronGggProvider } from '../services/poe/electron-ggg-provider.js';
 
 let _poeInitialized = false;
 let _modDb: ModDB | null = null;
@@ -24,6 +25,7 @@ export function registerPoeIpc(): void {
   const trade = createPoeTradeService();
   const importService = createPoeImportService();
   const analysis = createPoeAnalysisService(getModDb());
+  const gggProvider = createElectronGggProvider();
 
   // ── Session management (delegated to account service) ──
   ipcMain.handle('poe:set-session', async (_e, poesessid: string) => {
@@ -178,7 +180,8 @@ export function registerPoeIpc(): void {
   });
 
   ipcMain.handle('poe:connect-session', async (_e, poeSessionId: string) => {
-    return backend.connectSession(poeSessionId);
+    const accountName = await gggProvider.getAccountName(poeSessionId);
+    return backend.connectSession(poeSessionId, accountName);
   });
 
   ipcMain.handle('poe:analyze-character', async (_e, characterName: string) => {

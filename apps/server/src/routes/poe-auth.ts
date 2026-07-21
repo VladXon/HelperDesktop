@@ -64,7 +64,10 @@ export function createPoeOauthRouter(): Router {
       const user = (req as { user?: { id: number } }).user!;
       const poeSessionId = req.body?.poeSessionId as string | undefined;
       if (!poeSessionId) throw new HttpError(400, 'missing_poesessid', 'poeSessionId is required');
-      const result = await sessionProvider.connect(user.id, { poeSessionId });
+      const accountName = req.body?.accountName as string | undefined;
+      const credentials: Record<string, string> = { poeSessionId };
+      if (accountName) credentials.accountName = accountName;
+      const result = await sessionProvider.connect(user.id, credentials);
       res.json({ connected: true, accountName: result.accountName, mode: 'session' });
     } catch (err) { next(err); }
   });

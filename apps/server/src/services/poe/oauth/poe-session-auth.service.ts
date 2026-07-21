@@ -29,16 +29,21 @@ export function createSessionAuthProvider(): PoEAuthProvider {
       validateSessionId(poesessid);
 
       let accountName: string;
-      try {
-        accountName = await ggg.getAccountName(poesessid);
-      } catch (err) {
-        if (err instanceof HttpError && (err.status === 401 || err.status === 429 || err.status === 502)) {
+      if (credentials.accountName) {
+        accountName = credentials.accountName;
+        log.info('poe_session_connect_prevalidated', { userId, accountName });
+      } else {
+        try {
+          accountName = await ggg.getAccountName(poesessid);
+        } catch (err) {
+          if (err instanceof HttpError && (err.status === 401 || err.status === 429 || err.status === 502)) {
+            throw err;
+          }
+          if (err instanceof HttpError) {
+            throw new HttpError(400, 'session_invalid', 'Could not validate POESESSID — check your session cookie');
+          }
           throw err;
         }
-        if (err instanceof HttpError) {
-          throw new HttpError(400, 'session_invalid', 'Could not validate POESESSID — check your session cookie');
-        }
-        throw err;
       }
 
       const encrypted = encryptToken(poesessid);

@@ -1,51 +1,10 @@
 import { log } from '../../utils/logger.js';
 import { HttpError } from '../../middleware/error-handler.js';
+import type { GggCharacter, GggCharacterDetail, PoeDataProvider } from './ggg-data-provider.js';
+
+export type { GggCharacter, GggCharacterDetail, PoeDataProvider };
 
 const API_BASE = 'https://www.pathofexile.com';
-
-export interface GggClient {
-  getAccountName(poesessid: string): Promise<string>;
-  getCharacters(poesessid: string): Promise<Array<{ name: string; league: string; class: string; level: number }>>;
-  getCharacterDetail(poesessid: string, characterName: string): Promise<GggCharacterDetail>;
-}
-
-export interface GggCharacterDetail {
-  character: {
-    name: string;
-    league: string;
-    classId: number;
-    ascendancyClass: number;
-    class: string;
-    level: number;
-    experience: number;
-  };
-  items: Array<{
-    id: string;
-    name: string;
-    typeLine: string;
-    inventoryId: string;
-    socketedItems?: Array<{
-      id: string;
-      typeLine: string;
-      support?: boolean;
-      properties?: Array<{ name: string; values: Array<[string, number]>; displayMode: number; type: number }>;
-      requirements?: Array<{ name: string; values: Array<[string, number]>; displayMode: number }>;
-      explicitMods?: string[];
-      frameType: number;
-      socket?: number;
-    }>;
-    properties?: Array<{ name: string; values: Array<[string, number]>; displayMode: number; type: number }>;
-    requirements?: Array<{ name: string; values: Array<[string, number]>; displayMode: number }>;
-    explicitMods?: string[];
-    implicitMods?: string[];
-    craftedMods?: string[];
-    enchantMods?: string[];
-    frameType: number;
-    sockets?: Array<{ group: number; attr: string; sColour: string }>;
-    socket?: number;
-  }>;
-  jewels?: Array<unknown>;
-}
 
 function maskSessionId(poesessid: string): string {
   if (poesessid.length <= 8) return '***';
@@ -94,7 +53,7 @@ async function gggFetch<T>(path: string, poesessid: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export function createGggClient(): GggClient {
+export function createGggClient(): PoeDataProvider {
   return {
     async getAccountName(poesessid: string): Promise<string> {
       log.info('ggg_get_account_name', { session: maskSessionId(poesessid) });
