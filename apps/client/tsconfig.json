@@ -17,6 +17,6 @@
     "src/main/**/*.tsx",
     "src/preload/**/*.ts"
   ],
-  "exclude": ["node_modules", ".vite", "out"],
+  "exclude": ["node_modules", ".vite", "out", "**/__tests__/**"],
   "references": [{ "path": "../../packages/shared" }]
 }
