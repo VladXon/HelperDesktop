@@ -10,7 +10,13 @@ export async function setSession(poesessid: string): Promise<{ valid: boolean; a
 }
 
 export async function getSession(): Promise<SessionStatus> {
-  return window.api.poe.getSession();
+  const local = await window.api.poe.getSession();
+  if (local.valid && local.accountName) return local;
+  const server = await window.api.poe.getOAuthStatus().catch(() => null);
+  if (server?.connected && server.accountName) {
+    return { configured: true, valid: server.tokenValid, accountName: server.accountName };
+  }
+  return local;
 }
 
 export async function clearSession(): Promise<void> {
