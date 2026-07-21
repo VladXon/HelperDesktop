@@ -80,10 +80,15 @@ async function gggFetch<T>(path: string, poesessid: string): Promise<T> {
     throw new HttpError(401, 'session_expired', 'PoE session expired — reconnect your Path of Exile account');
   }
 
+  if (res.status === 404) {
+    log.info('ggg_session_invalid', { path });
+    throw new HttpError(400, 'session_invalid', 'POESESSID invalid or copied incorrectly — check your browser cookies');
+  }
+
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     log.info('ggg_api_error', { path, status: res.status, body: text.slice(0, 200) });
-    throw new HttpError(502, 'ggg_api_error', `GGG API returned ${res.status}`);
+    throw new HttpError(502, 'ggg_unavailable', `Path of Exile servers unavailable (${res.status})`);
   }
 
   return res.json() as Promise<T>;
