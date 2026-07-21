@@ -103,16 +103,22 @@ async function fetchViaWindow<T>(path: string, poesessid: string): Promise<T> {
     await win.loadURL(`${GGG_BASE}/login`);
 
     await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => resolve(), 15000);
+      let finished = false;
+      const timeout = setTimeout(() => {
+        if (!finished) { finished = true; resolve(); }
+      }, 25000);
+
       win.webContents.on('did-finish-load', () => {
-        clearTimeout(timeout);
-        resolve();
+        if (!finished) { finished = true; clearTimeout(timeout); resolve(); }
       });
-      win.webContents.on('did-fail-load', (_e, code, desc) => {
-        clearTimeout(timeout);
-        reject(new Error(`Page load failed: ${code} ${desc}`));
+
+      win.webContents.on('did-fail-load', (_e, code, desc, _validatedUrl, isMainFrame) => {
+        if (!isMainFrame || code === -3) return;
+        if (!finished) { finished = true; clearTimeout(timeout); reject(new Error(`Page load failed: ${code} ${desc}`)); }
       });
     });
+
+    await new Promise((resolve) => setTimeout(resolve, 3000));
 
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
