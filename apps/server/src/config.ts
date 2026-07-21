@@ -63,8 +63,13 @@ const envSchema = z
     }
 
     const poeEncryptionKey = env.POE_TOKEN_ENCRYPTION_KEY;
-    if (env.POE_AUTH_MODE === 'session' && !poeEncryptionKey) {
-      throw new Error('POE_TOKEN_ENCRYPTION_KEY is required when POE_AUTH_MODE=session');
+    if (env.POE_AUTH_MODE === 'session') {
+      if (!poeEncryptionKey) {
+        throw new Error('POE_TOKEN_ENCRYPTION_KEY is required when POE_AUTH_MODE=session');
+      }
+      if (poeEncryptionKey.length < 32) {
+        throw new Error('POE_TOKEN_ENCRYPTION_KEY must be at least 32 characters (for AES-256-GCM)');
+      }
     }
 
     const corsOrigins = env.CORS_ORIGINS

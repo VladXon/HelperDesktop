@@ -20,7 +20,7 @@ import { createPoeCharactersRouter } from './routes/poe-characters.js';
 import { attachWebSocket } from './ws.js';
 import { BotManager } from './services/bot-manager.js';
 import { startCleanupJob } from './services/cleanup.js';
-import { getDb } from './db/index.js';
+import { getDb, pingDb, closePool } from './db/index.js';
 import './db/index.js';
 
 export function createApp(): Express {
@@ -62,12 +62,21 @@ export function createApp(): Express {
   app.use(requestId);
   app.use(globalRateLimit);
 
-  app.get('/api/health', (_req, res) => {
+  app.get('/api/health', async (_req, res) => {
+    const dbStatus = await pingDb();
     res.json({
-      status: 'ok',
+      status: dbStatus.ok ? 'ok' : 'degraded',
       timestamp: new Date().toISOString(),
       version: config.version,
-      db: 'ok',
+      database: {
+        connected: dbStatus.ok,
+        latencyMs: dbStatus.latencyMs,
+        ...(!dbStatus.ok ? { error: dbStatus.error } : {}),
+      },
+      poe: {
+        authMode: config.poeAuthMode,
+        enabled: config.poeAuthMode === 'session' ? !!config.poeEncryptionKey : !!config.poeClientId,
+      },
       routes: {
         poe: {
           auth: ['GET /url', 'GET /callback', 'GET /characters', 'GET /characters/:name', 'GET /status'],
@@ -139,7 +148,8 @@ async function main(): Promise<void> {
     }, 10_000);
     timer.unref();
     void (bot?.stop() ?? Promise.resolve()).finally(() => {
-      server.close((err) => {
+      server.close(async (err) => {
+        await closePool();
         if (err) {
           log.shutdown('server close error', { error: err.message });
           process.exit(1);
