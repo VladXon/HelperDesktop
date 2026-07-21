@@ -32,6 +32,6 @@ export function errorHandler(
     return;
   }
   logger.debug('http', 'request error', { status, error: err.message, requestId: req.requestId });
-  const code = err.type ?? err.code ?? 'bad_request';
-  res.status(status).json({ error: err.message || code, requestId: req.requestId });
+  const code = (err as HttpError).code ?? err.type ?? 'bad_request';
+  res.status(status).json({ error: code, message: err.message, requestId: req.requestId });
 }
