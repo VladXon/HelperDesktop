@@ -12,6 +12,7 @@ import { AIExplanationPanel } from '../components/AIExplanationPanel';
 import { SaveBuildButton } from '../components/SaveBuildButton';
 import { HistoryPanel } from '../components/HistoryPanel';
 import { PoeAccountPanel } from '../components/PoeAccountPanel';
+import { CharacterPanel } from '../components/CharacterPanel';
 
 export function PoeAnalyzerPage(): React.JSX.Element {
   const { loading, error, result, analyze, setResult, setError, setLoading, reset } = usePoeAnalyzer();
@@ -112,6 +113,7 @@ export function PoeAnalyzerPage(): React.JSX.Element {
           </div>
         ) : (
           <div className="px-6 py-4 space-y-4">
+            <CharacterPanel />
             <PoeAccountPanel onImportCharacter={handleCharacterImport} isImporting={importingChar} />
             <HistoryPanel
               onSelect={handleHistorySelect}

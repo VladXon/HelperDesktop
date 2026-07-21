@@ -225,4 +225,21 @@ export function registerPoeIpc(): void {
       passiveTree,
     };
   });
+
+  // ── Character API (backend persistence) ──
+  ipcMain.handle('poe:list-characters', async () => {
+    return backend.listCharacters();
+  });
+
+  ipcMain.handle('poe:sync-characters', async () => {
+    return backend.syncCharacters();
+  });
+
+  ipcMain.handle('poe:get-character', async (_e, id: number) => {
+    return backend.getCharacter(id);
+  });
+
+  ipcMain.handle('poe:refresh-character', async (_e, id: number) => {
+    return backend.refreshCharacter(id);
+  });
 }

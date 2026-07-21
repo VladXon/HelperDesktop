@@ -110,3 +110,29 @@ export function connectSession(poeSessionId: string) {
     body: { poeSessionId },
   });
 }
+
+export interface CharacterSummary {
+  id: number;
+  name: string;
+  level: number;
+  class: string;
+  ascendancy: string | null;
+  league: string;
+  lastSync: string;
+}
+
+export function listCharacters() {
+  return apiFetch<CharacterSummary[]>('/api/poe/characters');
+}
+
+export function syncCharacters() {
+  return apiFetch<CharacterSummary[]>('/api/poe/characters/sync', { method: 'POST' });
+}
+
+export function getCharacter(id: number) {
+  return apiFetch<Record<string, unknown>>(`/api/poe/characters/${id}`);
+}
+
+export function refreshCharacter(id: number) {
+  return apiFetch<Record<string, unknown>>(`/api/poe/characters/${id}/refresh`, { method: 'POST' });
+}

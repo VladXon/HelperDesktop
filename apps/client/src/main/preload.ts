@@ -116,6 +116,11 @@ const api = {
     fetchCharacterDetail: (name: string) => invoke<Record<string, unknown>>('poe:fetch-character-detail', name),
     analyzeCharacter: (name: string) => invoke<unknown>('poe:analyze-character', name),
     connectSession: (poeSessionId: string) => invoke<{ connected: boolean; accountName: string; mode: string }>('poe:connect-session', poeSessionId),
+
+    listCharacters: () => invoke<Array<{ id: number; name: string; level: number; class: string; ascendancy: string | null; league: string; lastSync: string }>>('poe:list-characters'),
+    syncCharacters: () => invoke<Array<{ id: number; name: string; level: number; class: string; ascendancy: string | null; league: string; lastSync: string }>>('poe:sync-characters'),
+    getCharacter: (id: number) => invoke<Record<string, unknown>>('poe:get-character', id),
+    refreshCharacter: (id: number) => invoke<Record<string, unknown>>('poe:refresh-character', id),
   },
 };
 

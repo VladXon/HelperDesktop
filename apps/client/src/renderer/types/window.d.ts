@@ -11,6 +11,16 @@ import type {
   AccountInfo,
 } from '@helper/shared';
 
+export interface PoeCharacterSummary {
+  id: number;
+  name: string;
+  level: number;
+  class: string;
+  ascendancy: string | null;
+  league: string;
+  lastSync: string;
+}
+
 export interface HealthStatus {
   status: string;
   timestamp: string;
@@ -181,6 +191,11 @@ export interface ElectronApi {
     fetchCharacterDetail: (name: string) => Promise<Record<string, unknown>>;
     analyzeCharacter: (name: string) => Promise<unknown>;
     connectSession: (poeSessionId: string) => Promise<{ connected: boolean; accountName: string; mode: string }>;
+
+    listCharacters: () => Promise<PoeCharacterSummary[]>;
+    syncCharacters: () => Promise<PoeCharacterSummary[]>;
+    getCharacter: (id: number) => Promise<Record<string, unknown>>;
+    refreshCharacter: (id: number) => Promise<Record<string, unknown>>;
   };
 }
 
