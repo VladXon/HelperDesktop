@@ -100,6 +100,18 @@ async function fetchViaWindow<T>(path: string, poesessid: string): Promise<T> {
   const win = createGggWindow();
 
   try {
+    await win.webContents.session.clearStorageData({ storages: ['cookies'] });
+
+    await win.webContents.session.cookies.set({
+      url: GGG_BASE,
+      name: 'POESESSID',
+      value: poesessid,
+      domain: '.pathofexile.com',
+      path: '/',
+      secure: true,
+      sameSite: 'lax',
+    });
+
     await win.loadURL(`${GGG_BASE}/login`);
 
     await new Promise<void>((resolve, reject) => {
@@ -119,18 +131,6 @@ async function fetchViaWindow<T>(path: string, poesessid: string): Promise<T> {
     });
 
     await new Promise((resolve) => setTimeout(resolve, 3000));
-
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    await win.webContents.session.cookies.set({
-      url: GGG_BASE,
-      name: 'POESESSID',
-      value: poesessid,
-      domain: '.pathofexile.com',
-      path: '/',
-      secure: true,
-      sameSite: 'lax',
-    });
 
     const fetchScript = `
       (async () => {
