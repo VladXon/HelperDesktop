@@ -34,11 +34,12 @@ describe('errorHandler', () => {
     expect(res.body.error).toBe('internal_error');
   });
 
-  it('returns the status and message for HttpError 4xx', async () => {
+  it('returns the status and code for HttpError 4xx', async () => {
     const app = appWith((_req, _res, next) => next(new HttpError(401, 'unauthorized', 'Bad token')));
     const res = await request(app).get('/x');
     expect(res.status).toBe(401);
-    expect(res.body.error).toBe('Bad token');
+    expect(res.body.error).toBe('unauthorized');
+    expect(res.body.message).toBe('Bad token');
   });
 });
 

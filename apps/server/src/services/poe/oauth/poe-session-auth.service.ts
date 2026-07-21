@@ -6,8 +6,6 @@ import { HttpError } from '../../../middleware/error-handler.js';
 import { encryptToken, decryptToken } from '@helper/poe-backend/crypto';
 import { createGggClient } from '../ggg-client.js';
 
-const API_BASE = 'https://www.pathofexile.com';
-
 export interface PoEAuthProvider {
   connect(userId: number, credentials: Record<string, string>): Promise<{ accountName: string }>;
   disconnect(accountId: number): Promise<void>;
@@ -34,8 +32,13 @@ export function createSessionAuthProvider(): PoEAuthProvider {
       try {
         accountName = await ggg.getAccountName(poesessid);
       } catch (err) {
-        if (err instanceof HttpError && err.status === 401) throw err;
-        throw new HttpError(400, 'invalid_poesessid', 'Could not validate POESESSID — check your session cookie');
+        if (err instanceof HttpError && (err.status === 401 || err.status === 429 || err.status === 502)) {
+          throw err;
+        }
+        if (err instanceof HttpError) {
+          throw new HttpError(400, 'session_invalid', 'Could not validate POESESSID — check your session cookie');
+        }
+        throw err;
       }
 
       const encrypted = encryptToken(poesessid);

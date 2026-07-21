@@ -104,15 +104,22 @@ export function createPoeOauthRouter(): Router {
       if (sessionProvider) {
         const account = await sessionProvider.getAccount(user.id);
         res.json({
-          connected: !!account,
-          accountName: account?.accountName ?? null,
-          authType: account?.authType ?? null,
-          mode: 'session',
+          authenticated: !!account,
+          account: account?.accountName ?? null,
+          authType: (account?.authType as string) ?? null,
+          mode: 'session' as const,
+          expires: null,
         });
         return;
       }
       const status = await getConnectionStatus(user.id);
-      res.json({ ...status, mode: 'oauth' });
+      res.json({
+        authenticated: status.connected,
+        account: status.accountName,
+        authType: 'oauth' as const,
+        mode: 'oauth' as const,
+        expires: status.expiresAt,
+      });
     } catch (err) { next(err); }
   });
 

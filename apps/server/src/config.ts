@@ -62,6 +62,11 @@ const envSchema = z
       throw new Error('BOT_SHARED_SECRET is required in production');
     }
 
+    const poeEncryptionKey = env.POE_TOKEN_ENCRYPTION_KEY;
+    if (env.POE_AUTH_MODE === 'session' && !poeEncryptionKey) {
+      throw new Error('POE_TOKEN_ENCRYPTION_KEY is required when POE_AUTH_MODE=session');
+    }
+
     const corsOrigins = env.CORS_ORIGINS
       .split(',')
       .map((s) => s.trim())
