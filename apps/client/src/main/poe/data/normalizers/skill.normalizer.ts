@@ -1,40 +1,28 @@
-import type { PoeSkillRecord } from '@helper/shared';
+import type { PoeSkillRecord, ExternalSkillDTO } from '@helper/shared';
 
-interface ExternalSkillDTO {
-  name?: string;
-  type?: string;
-  gemLevel?: number;
-  manaMultiplier?: number;
-  qualityStats?: string[];
-  quality_stat_text?: string;
-  tags?: string[];
-  source?: string;
-  sourceUrl?: string;
-}
-
-export function normalizeSkill(raw: ExternalSkillDTO): PoeSkillRecord {
+export function normalizeSkill(raw: ExternalSkillDTO, now: number): PoeSkillRecord {
   const qualityStats = raw.qualityStats ??
-    (raw.quality_stat_text ? raw.quality_stat_text.split('\n').filter(Boolean) : []);
+    (raw.quality_stat_text ? raw.quality_stat_text.split('\n').filter(Boolean).map((s) => s.trim()) : []);
 
   return {
     game: 'poe1',
     name: (raw.name ?? '').trim(),
-    type: (raw.type ?? 'active').trim(),
-    gemLevel: raw.gemLevel ?? 20,
+    type: (raw.skill_type ?? raw.type ?? 'active').trim(),
+    gemLevel: raw.gemLevel ?? parseInt(raw.gem_level ?? '20', 10),
     manaMultiplier: raw.manaMultiplier ?? 100,
-    qualityStats: qualityStats.map((s) => s.trim()).filter(Boolean),
+    qualityStats,
     tags: raw.tags ?? [],
     source: raw.source ?? 'unknown',
     sourceUrl: raw.sourceUrl ?? '',
     version: '',
-    updatedAt: Date.now(),
+    updatedAt: now,
   };
 }
 
-export function normalizeSkills(rawSkills: ExternalSkillDTO[]): PoeSkillRecord[] {
+export function normalizeSkills(rawSkills: ExternalSkillDTO[], now: number): PoeSkillRecord[] {
   return rawSkills
     .filter((raw) => Boolean((raw.name ?? '').trim()))
-    .map(normalizeSkill)
+    .map((raw) => normalizeSkill(raw, now))
     .filter((skill, index, self) =>
       index === self.findIndex((s) => s.name.toLowerCase() === skill.name.toLowerCase()),
     );

@@ -13,10 +13,11 @@ export async function loadSkills(): Promise<AdapterResult<SkillLoaderResult>> {
   const result = await poeWikiSource.fetchSkills();
   if (!result.ok) return result;
 
-  const normalized = normalizeSkills(result.data);
+  const now = Date.now();
+  const normalized = normalizeSkills(result.data, now);
   return {
     ok: true,
-    data: { skills: normalized, source: 'poewiki', fetchedAt: Date.now() },
+    data: { skills: normalized, source: 'poewiki', fetchedAt: now },
     meta: result.meta,
   };
 }

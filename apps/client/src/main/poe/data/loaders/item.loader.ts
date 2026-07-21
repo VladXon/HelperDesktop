@@ -13,10 +13,11 @@ export async function loadUniques(): Promise<AdapterResult<ItemLoaderResult>> {
   const result = await poeWikiSource.fetchUniques();
   if (!result.ok) return result;
 
-  const normalized = normalizeItems(result.data);
+  const now = Date.now();
+  const normalized = normalizeItems(result.data, now);
   return {
     ok: true,
-    data: { items: normalized, source: 'poewiki', fetchedAt: Date.now() },
+    data: { items: normalized, source: 'poewiki', fetchedAt: now },
     meta: result.meta,
   };
 }
@@ -25,13 +26,14 @@ export async function searchItems(query: string): Promise<AdapterResult<ItemLoad
   const result = await poeWikiSource.fetchItems(query);
   if (!result.ok) return result;
 
+  const now = Date.now();
   const normalized = normalizeItems(
     result.data.map((s) => ({ name: s.title })),
+    now,
   );
-
   return {
     ok: true,
-    data: { items: normalized, source: 'poewiki', fetchedAt: Date.now() },
+    data: { items: normalized, source: 'poewiki', fetchedAt: now },
     meta: result.meta,
   };
 }

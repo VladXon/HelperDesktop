@@ -1,15 +1,6 @@
-import type { PoeModifierRecord } from '@helper/shared';
+import type { PoeModifierRecord, ExternalModifierDTO } from '@helper/shared';
 
-interface ExternalModDTO {
-  name?: string;
-  domain?: string;
-  generationType?: string;
-  values?: number[];
-  tags?: string[];
-  tiers?: number[];
-}
-
-export function normalizeMod(raw: ExternalModDTO): PoeModifierRecord {
+export function normalizeMod(raw: ExternalModifierDTO): PoeModifierRecord {
   return {
     name: (raw.name ?? '').trim(),
     domain: (raw.domain ?? 'item').trim(),
@@ -20,7 +11,7 @@ export function normalizeMod(raw: ExternalModDTO): PoeModifierRecord {
   };
 }
 
-export function normalizeMods(rawMods: ExternalModDTO[]): PoeModifierRecord[] {
+export function normalizeMods(rawMods: ExternalModifierDTO[]): PoeModifierRecord[] {
   return rawMods
     .filter((raw) => Boolean((raw.name ?? '').trim()))
     .map(normalizeMod)

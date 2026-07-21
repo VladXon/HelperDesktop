@@ -438,6 +438,23 @@ export const poeAiProviderSettings = pgTable(
   },
 );
 
+export const poeSyncHistory = pgTable(
+  'poe_sync_history',
+  {
+    id: serial('id').primaryKey(),
+    source: text('source').notNull(),
+    syncType: text('sync_type').notNull(),
+    startedAt: timestamp('started_at', { mode: 'string' }).notNull(),
+    finishedAt: timestamp('finished_at', { mode: 'string' }),
+    status: text('status').notNull().default('running'),
+    inserted: integer('inserted').notNull().default(0),
+    updated: integer('updated').notNull().default(0),
+    failed: integer('failed').notNull().default(0),
+    errorJson: text('error_json'),
+    createdAt: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
+  },
+);
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Session = typeof sessions.$inferSelect;
@@ -485,3 +502,5 @@ export type PoeAiRequest = typeof poeAiRequests.$inferSelect;
 export type NewPoeAiRequest = typeof poeAiRequests.$inferInsert;
 export type PoeAiProviderSetting = typeof poeAiProviderSettings.$inferSelect;
 export type NewPoeAiProviderSetting = typeof poeAiProviderSettings.$inferInsert;
+export type PoeSyncHistory = typeof poeSyncHistory.$inferSelect;
+export type NewPoeSyncHistory = typeof poeSyncHistory.$inferInsert;

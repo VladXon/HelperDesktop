@@ -26,14 +26,14 @@ export {
   poeWikiSource, ninjaSource, tradeSource, forumSource,
   loadUniques, searchItems, loadSkills, loadPassiveTree, loadLeagues,
   normalizeItem, normalizeItems, normalizeSkill, normalizeSkills, normalizeMod, normalizeMods,
-  runSyncPipeline, createItemTask, createSkillTask, createEconomyTask, createLeagueTask,
-  startSyncScheduler, stopSyncScheduler, isSyncActive,
+  normalizeEconomyEntry, normalizeEconomyEntries, normalizeLeague, normalizeLeagues,
+  runSyncPipeline, SyncScheduler,
   createSyncResult,
 } from './data/index.js';
 
 export type {
   TradeSearchResult,
   ItemLoaderResult, SkillLoaderResult, LeagueLoaderResult,
-  SyncTask, SyncEngineOptions, SyncResult,
+  SyncEngineOptions, SyncResult,
   DataSource, DataSourceOptions,
 } from './data/index.js';
