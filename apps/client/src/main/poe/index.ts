@@ -21,3 +21,19 @@ export type {
   SkillSummary, LeechSummary, GuardSkillSummary,
   DamageProfile, ScalingVector, ChargeState, ClusterJewelSummary, Influence,
 } from './core/index.js';
+
+export {
+  poeWikiSource, ninjaSource, tradeSource, forumSource,
+  loadUniques, searchItems, loadSkills, loadPassiveTree, loadLeagues,
+  normalizeItem, normalizeItems, normalizeSkill, normalizeSkills, normalizeMod, normalizeMods,
+  runSyncPipeline, createItemTask, createSkillTask, createEconomyTask, createLeagueTask,
+  startSyncScheduler, stopSyncScheduler, isSyncActive,
+  createSyncResult,
+} from './data/index.js';
+
+export type {
+  TradeSearchResult,
+  ItemLoaderResult, SkillLoaderResult, LeagueLoaderResult,
+  SyncTask, SyncEngineOptions, SyncResult,
+  DataSource, DataSourceOptions,
+} from './data/index.js';

@@ -6,7 +6,7 @@ export default defineConfig({
     conditions: ['import', 'module', 'node', 'default'],
   },
   test: {
-    include: ['src/main/poe/core/__tests__/**/*.test.ts'],
+    include: ['src/main/poe/**/__tests__/**/*.test.ts'],
     environment: 'node',
   },
 });
