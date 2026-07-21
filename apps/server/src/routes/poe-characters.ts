@@ -3,6 +3,8 @@ import { getDb, schema } from '../db/index.js';
 import { eq, desc } from 'drizzle-orm';
 import { requireAuth } from '../middleware/auth.js';
 import { createCharacterProvider } from '../services/poe/character.provider.js';
+import { normalizeCharacterSummary, normalizeCharacterDetails } from '../services/poe/normalizer/character-normalizer.js';
+import type { PoeCharacterSummary, PoeCharacterDetails } from '../services/poe/normalizer/types.js';
 import { HttpError } from '../middleware/error-handler.js';
 
 const characterProvider = createCharacterProvider();
@@ -32,14 +34,16 @@ export function createPoeCharactersRouter(): Router {
         .where(eq(schema.poeCharacters.accountId, active.id))
         .orderBy(desc(schema.poeCharacters.level));
 
-      res.json(list);
+      const normalized: PoeCharacterSummary[] = list.map(normalizeCharacterSummary);
+      res.json(normalized);
     } catch (err) { next(err); }
   });
 
   router.get('/:id', async (req, res, next) => {
     try {
       const ch = await characterProvider.getCharacter(Number(req.params.id));
-      res.json(ch);
+      const normalized: PoeCharacterDetails = normalizeCharacterDetails(ch);
+      res.json(normalized);
     } catch (err) { next(err); }
   });
 
@@ -54,7 +58,8 @@ export function createPoeCharactersRouter(): Router {
       const { decryptToken } = await import('@helper/poe-backend/crypto');
       const sessionId = decryptToken(active.accessTokenEncrypted);
       const list = await characterProvider.fetchAndSaveCharacters(active.id, sessionId);
-      res.json(list);
+      const normalized: PoeCharacterSummary[] = list.map(normalizeCharacterSummary);
+      res.json(normalized);
     } catch (err) { next(err); }
   });
 
@@ -69,7 +74,8 @@ export function createPoeCharactersRouter(): Router {
       const { decryptToken } = await import('@helper/poe-backend/crypto');
       const sessionId = decryptToken(active.accessTokenEncrypted);
       const ch = await characterProvider.refreshCharacter(Number(req.params.id), sessionId);
-      res.json(ch);
+      const normalized: PoeCharacterDetails = normalizeCharacterDetails(ch);
+      res.json(normalized);
     } catch (err) { next(err); }
   });
 

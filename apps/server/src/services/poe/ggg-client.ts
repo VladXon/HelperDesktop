@@ -27,6 +27,7 @@ export interface GggCharacterDetail {
     socketedItems?: Array<{
       id: string;
       typeLine: string;
+      support?: boolean;
       properties?: Array<{ name: string; values: Array<[string, number]>; displayMode: number; type: number }>;
       requirements?: Array<{ name: string; values: Array<[string, number]>; displayMode: number }>;
       explicitMods?: string[];
