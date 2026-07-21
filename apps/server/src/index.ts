@@ -16,6 +16,7 @@ import { createDevRouter } from './routes/dev.js';
 import { createPoeOauthRouter } from './routes/poe-auth.js';
 import { createPoeBuildsRouter } from './routes/poe-builds.js';
 import { createPoeAccountsRouter } from './routes/poe-accounts.js';
+import { createPoeCharactersRouter } from './routes/poe-characters.js';
 import { attachWebSocket } from './ws.js';
 import { BotManager } from './services/bot-manager.js';
 import { startCleanupJob } from './services/cleanup.js';
@@ -87,6 +88,7 @@ export function createApp(): Express {
   app.use('/api/poe/auth', createPoeOauthRouter());
   app.use('/api/poe/builds', createPoeBuildsRouter());
   app.use('/api/poe/accounts', createPoeAccountsRouter());
+  app.use('/api/poe/characters', createPoeCharactersRouter());
 
   app.use((req, res) => {
     res.status(404).json({ error: 'not_found', requestId: req.requestId });

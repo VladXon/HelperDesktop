@@ -1,8 +1,10 @@
 import { sql } from 'drizzle-orm';
 import {
+  bigint,
   boolean,
   index,
   integer,
+  jsonb,
   pgTable,
   primaryKey,
   real,
@@ -508,6 +510,61 @@ export const poeOauthStates = pgTable(
   },
 );
 
+export const poeCharacters = pgTable(
+  'poe_characters',
+  {
+    id: serial('id').primaryKey(),
+    accountId: integer('account_id').notNull(),
+    name: text('name').notNull(),
+    league: text('league').notNull(),
+    class: text('class').notNull(),
+    ascendancy: text('ascendancy'),
+    level: integer('level').notNull(),
+    experience: bigint('experience', { mode: 'number' }),
+    rawJson: jsonb('raw_json').notNull().default({}),
+    passiveTreeJson: jsonb('passive_tree_json'),
+    fetchedAt: timestamp('fetched_at', { mode: 'string' }).notNull().defaultNow(),
+  },
+  (t) => ({
+    accountIdx: index('idx_char_account').on(t.accountId),
+    leagueIdx: index('idx_char_league').on(t.league),
+    accountNameUnique: uniqueIndex('poe_characters_account_name_unique').on(t.accountId, t.name),
+  }),
+);
+
+export const poeCharacterSnapshots = pgTable(
+  'poe_character_snapshots',
+  {
+    id: serial('id').primaryKey(),
+    characterId: integer('character_id').notNull(),
+    level: integer('level').notNull(),
+    rawJson: jsonb('raw_json').notNull(),
+    changeSummary: jsonb('change_summary'),
+    createdAt: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
+  },
+  (t) => ({
+    charCreatedIdx: index('idx_snap_character').on(t.characterId, t.createdAt.desc()),
+  }),
+);
+
+export const poeItemCache = pgTable(
+  'poe_item_cache',
+  {
+    id: serial('id').primaryKey(),
+    itemHash: text('item_hash').notNull().unique(),
+    name: text('name').notNull(),
+    typeLine: text('type_line').notNull(),
+    inventoryId: text('inventory_id').notNull(),
+    frameType: integer('frame_type').notNull(),
+    rawJson: jsonb('raw_json').notNull(),
+    cachedAt: timestamp('cached_at', { mode: 'string' }).notNull().defaultNow(),
+    expiresAt: timestamp('expires_at', { mode: 'string' }).notNull(),
+  },
+  (t) => ({
+    hashIdx: index('idx_item_hash').on(t.itemHash),
+  }),
+);
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Session = typeof sessions.$inferSelect;
@@ -564,3 +621,8 @@ export type NewPoeModifier = typeof poeModifiers.$inferInsert;
 export type PoeOauthState = typeof poeOauthStates.$inferSelect;
 export type NewPoeOauthState = typeof poeOauthStates.$inferInsert;
 export type NewPoeSyncHistory = typeof poeSyncHistory.$inferInsert;
+
+export type PoeCharacter = typeof poeCharacters.$inferSelect;
+export type NewPoeCharacter = typeof poeCharacters.$inferInsert;
+export type PoeCharacterSnapshot = typeof poeCharacterSnapshots.$inferSelect;
+export type PoeItemCache = typeof poeItemCache.$inferSelect;
