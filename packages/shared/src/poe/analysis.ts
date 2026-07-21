@@ -119,6 +119,7 @@ export interface BuildSummary {
 
 export interface AnalysisMetadata {
   analyzerVersion: string;
+  calculationVersion: string;
   patchVersion: string;
   analyzedAt: number;
   buildHash: string;

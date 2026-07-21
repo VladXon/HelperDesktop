@@ -5,6 +5,7 @@ import { calculateDefense } from '../calculators/defense.calculator.js';
 import { evaluateDamageReport, evaluateDefenseReport, evaluateScaling, detectUpgrades } from '../rules/index.js';
 
 const ANALYZER_VERSION = '2.0.0';
+const CALCULATION_VERSION = '1.0.0';
 
 function hashBuild(build: Build): string {
   const identity = `${build.character.class}:${build.character.ascendancy}:${build.character.level}:${build.items.length}:${build.skills.length}`;
@@ -122,6 +123,7 @@ export function analyze(build: Build, context?: Partial<AnalysisContext>): Analy
 
   const metadata: AnalysisMetadata = {
     analyzerVersion: ANALYZER_VERSION,
+    calculationVersion: CALCULATION_VERSION,
     patchVersion: ctx.patch,
     analyzedAt: Date.now(),
     buildHash: hashBuild(build),

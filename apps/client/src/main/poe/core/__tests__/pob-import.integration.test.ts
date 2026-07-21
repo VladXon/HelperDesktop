@@ -65,4 +65,50 @@ describe('PoB import integration', () => {
     expect(slots).toContain('ring2');
     expect(slots).toContain('belt');
   });
+
+  it('includes version metadata in AnalysisResult', () => {
+    const xml = readFileSync(resolve(FIXTURES_DIR, 'boneshatter-jugg.pob.xml'), 'utf-8');
+    const dto = parsePobXml(xml);
+    const build = fromPob(dto);
+    const result = analyze(build);
+
+    expect(result.metadata.analyzerVersion).toBe('2.0.0');
+    expect(result.metadata.calculationVersion).toBe('1.0.0');
+    expect(result.metadata.patchVersion).toBeTruthy();
+    expect(result.metadata.buildHash).toBeTruthy();
+    expect(result.metadata.analyzedAt).toBeGreaterThan(0);
+  });
+
+  it('parses fire trap elementalist spell build and produces AnalysisResult', () => {
+    const xml = readFileSync(resolve(FIXTURES_DIR, 'firetrap-elementalist.pob.xml'), 'utf-8');
+    const dto = parsePobXml(xml);
+    expect(dto.build.className).toBe('Elementalist');
+    expect(dto.build.level).toBe(92);
+    expect(dto.skills.length).toBe(2);
+
+    const build = fromPob(dto);
+    expect(build.character.class).toBe('Elementalist');
+    expect(build.character.level).toBe(92);
+    expect(build.items.length).toBeGreaterThanOrEqual(7);
+    expect(build.skills.length).toBe(2);
+
+    const result = analyze(build);
+    expect(result.build.buildName).toContain('Elementalist');
+    expect(result.facts.offense).toBeDefined();
+    expect(result.facts.defense).toBeDefined();
+    expect(result.facts.scaling).toBeDefined();
+    expect(result.metadata.calculationVersion).toBe('1.0.0');
+    expect(result.scores.overall).toBeGreaterThanOrEqual(0);
+    expect(result.scores.overall).toBeLessThanOrEqual(100);
+  });
+
+  it('aggregates energy shield stats for hybrid builds', () => {
+    const xml = readFileSync(resolve(FIXTURES_DIR, 'firetrap-elementalist.pob.xml'), 'utf-8');
+    const dto = parsePobXml(xml);
+    const build = fromPob(dto);
+    const result = analyze(build);
+
+    expect(result.facts.defense.energyShield).toBeGreaterThan(0);
+    expect(result.facts.defense.combinedPool).toBeGreaterThan(result.facts.defense.life);
+  });
 });
