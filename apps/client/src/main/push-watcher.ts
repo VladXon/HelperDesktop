@@ -1,8 +1,7 @@
-import { watch } from 'node:fs';
-import { readFile, access } from 'node:fs/promises';
+import { watch, existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { app, Notification } from 'electron';
-import { existsSync } from 'node:fs';
 
 interface PushMessage {
   title?: string;
@@ -40,8 +39,17 @@ export function startPushWatcher(): void {
   const filePath = getPushFilePath();
   console.log(`[push-watcher] watching ${filePath}`);
 
-  if (existsSync(filePath)) {
-    void handlePushFileChange(filePath);
+  try {
+    if (!existsSync(filePath)) {
+      const dir = join(filePath, '..');
+      if (!existsSync(dir)) {
+        mkdirSync(dir, { recursive: true });
+      }
+      writeFileSync(filePath, '{}', 'utf-8');
+    }
+  } catch {
+    console.error('[push-watcher] failed to create push file:', filePath);
+    return;
   }
 
   try {

@@ -54,8 +54,8 @@ export function CharacterPanel(): React.JSX.Element {
   }, []);
 
   useEffect(() => {
-    loadCharacters();
-  }, [loadCharacters]);
+    // Characters loaded manually via Sync button only
+  }, []);
 
   const handleSync = async () => {
     setSyncState('syncing');
