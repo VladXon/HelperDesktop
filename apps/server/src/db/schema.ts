@@ -235,6 +235,7 @@ export const poeBuilds = pgTable(
   'poe_builds',
   {
     id: serial('id').primaryKey(),
+    userId: integer('user_id'),
     buildHash: text('build_hash').notNull().unique(),
     game: text('game').notNull(),
     name: text('name'),
@@ -242,6 +243,8 @@ export const poeBuilds = pgTable(
     characterClass: text('character_class'),
     ascendancy: text('ascendancy'),
     level: integer('level'),
+    pobUrl: text('pob_url'),
+    rawPobXml: text('raw_pob_xml'),
     rawSourceHash: text('raw_source_hash'),
     createdAt: timestamp('created_at', { mode: 'string' }).notNull().defaultNow(),
   },
