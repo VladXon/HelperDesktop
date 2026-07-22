@@ -95,7 +95,7 @@ function createWindow(): void {
 }
 
 app.on('certificate-error', (event, _webContents, url, _error, _certificate, callback) => {
-  const allowed = ['178.172.137.167', '2.26.80.138'];
+  const allowed = ['2.26.80.138'];
   try {
     const host = new URL(url).hostname;
     if (allowed.includes(host)) {

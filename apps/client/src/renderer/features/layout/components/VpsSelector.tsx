@@ -23,25 +23,17 @@ const servers: VpsEntry[] = [
   {
     id: 'primary',
     name: 'DesktopHelperServ',
-    ip: '178.172.137.167',
-    domain: '',
-    url: 'http://178.172.137.167:3001',
-    isPrimary: true,
-  },
-  {
-    id: 'backup',
-    name: 'DesktopHelperServ',
     ip: '2.26.80.138',
-    domain: 'verbal-ivory-buzzard.play2go.cloud',
+    domain: '',
     url: 'http://2.26.80.138:3001',
-    isPrimary: false,
+    isPrimary: true,
   },
 ];
 
 type HealthMap = Record<string, 'online' | 'offline' | 'checking'>;
 
 function useVpsHealth(): HealthMap {
-  const [health, setHealth] = React.useState<HealthMap>({ primary: 'checking', backup: 'checking' });
+  const [health, setHealth] = React.useState<HealthMap>({ primary: 'checking' });
 
   React.useEffect(() => {
     let mounted = true;
@@ -70,21 +62,9 @@ function useVpsHealth(): HealthMap {
 }
 
 export function VpsSelector(): React.JSX.Element {
-  const [activeServer, setActiveServer] = React.useState<string>('primary');
+  const [activeServer] = React.useState<string>('primary');
   const health = useVpsHealth();
-
-  React.useEffect(() => {
-    window.api.settings.get('vps:active').then((v) => {
-      if (typeof v === 'string') setActiveServer(v);
-    });
-  }, []);
-
-  const select = (id: string) => {
-    setActiveServer(id);
-    window.api.settings.set('vps:active', id);
-  };
-
-  const active = servers.find((s) => s.id === activeServer)!;
+  const active = servers[0]!;
   const activeHealth = health[active.id] ?? 'offline';
 
   return (
@@ -115,7 +95,6 @@ export function VpsSelector(): React.JSX.Element {
             return (
               <DropdownMenuItem
                 key={s.id}
-                onSelect={() => select(s.id)}
                 className={`flex items-center gap-3 ${isActive ? 'bg-accent/10' : ''}`}
               >
                 {h === 'online' ? (

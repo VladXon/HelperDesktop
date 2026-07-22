@@ -17,15 +17,14 @@ interface VpsEntry {
 }
 
 const servers: VpsEntry[] = [
-  { id: 'server1', url: 'http://178.172.137.167:3001', label: 'Сервер 1 — Belarus' },
-  { id: 'server2', url: 'http://2.26.80.138:3001', label: 'Сервер 2 — Germany' },
+  { id: 'server', url: 'http://2.26.80.138:3001', label: 'Сервер — Germany' },
 ];
 
 type HealthStatus = 'online' | 'offline' | 'checking';
 
 export function ServerStatusBadge(): React.JSX.Element {
   const currentHealth = useServerHealth();
-  const [activeServer, setActiveServer] = React.useState<string>('server1');
+  const [activeServer, setActiveServer] = React.useState<string>('server');
   const [health, setHealth] = React.useState<Record<string, HealthStatus>>({});
   const [loaded, setLoaded] = React.useState(false);
 

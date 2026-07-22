@@ -5,7 +5,9 @@ import { readJson, writeJson } from './safe-storage.js';
 import type { ServerUrlFile } from './types.js';
 
 const SERVER_URL_FILE = 'server-url.json';
-const DEFAULT_SERVER_URL = 'http://178.172.137.167:3001';
+const DEFAULT_SERVER_URL = 'http://2.26.80.138:3001';
+const VPS_IP = '2.26.80.138';
+const OLD_VPS_IPS = ['178.172.137.167'];
 
 let cachedServerUrl: string | null = null;
 
@@ -13,13 +15,15 @@ function _serverUrlPath(): string {
   return join(app.getPath('userData'), SERVER_URL_FILE);
 }
 
-const HTTP_IPS = ['178.172.137.167', '2.26.80.138'];
-
-function migrateHttpsToHttp(url: string): string {
+function migrateOldUrl(url: string): string {
   try {
     const parsed = new URL(url);
-    if (parsed.protocol === 'https:' && HTTP_IPS.includes(parsed.hostname)) {
+    if (parsed.protocol === 'https:' && parsed.hostname === VPS_IP) {
       parsed.protocol = 'http:';
+      return parsed.toString();
+    }
+    if (OLD_VPS_IPS.includes(parsed.hostname)) {
+      parsed.hostname = VPS_IP;
       return parsed.toString();
     }
   } catch {
@@ -36,7 +40,7 @@ export async function getServerUrl(): Promise<string> {
   }
   const data = await readJson<ServerUrlFile>(SERVER_URL_FILE);
   cachedServerUrl = data?.url ?? DEFAULT_SERVER_URL;
-  const migrated = migrateHttpsToHttp(cachedServerUrl);
+  const migrated = migrateOldUrl(cachedServerUrl);
   if (migrated !== cachedServerUrl) {
     cachedServerUrl = migrated;
     await writeJson(SERVER_URL_FILE, { url: migrated });
