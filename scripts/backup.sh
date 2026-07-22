@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REMOTE=${REMOTE:-root@178.172.137.167}
+REMOTE=${REMOTE:-root@2.26.80.138}
 DB_PATH=${DB_PATH:-/opt/helperdesktop/apps/server/helperdesktop.db}
 BACKUP_DIR=${BACKUP_DIR:-/opt/helperdesktop/backups}
 RETENTION_DAYS=${RETENTION_DAYS:-30}

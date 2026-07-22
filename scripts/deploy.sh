@@ -2,8 +2,7 @@
 set -euo pipefail
 
 SERVERS=(
-  "server1:root@178.172.137.167"
-  "server2:root@2.26.80.138"
+  "server:root@2.26.80.138"
 )
 
 resolve_remote() {
@@ -17,12 +16,12 @@ resolve_remote() {
     fi
   done
   echo "Unknown VPS: $name" >&2
-  echo "Available: server1 (Belarus), server2 (Germany)" >&2
+  echo "Available: server (Germany)" >&2
   exit 1
 }
 
 if [ -z "${REMOTE:-}" ]; then
-  VPS="${VPS:-server1}"
+  VPS="${VPS:-server}"
   REMOTE=$(resolve_remote "$VPS")
 fi
 

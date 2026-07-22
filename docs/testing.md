@@ -55,7 +55,7 @@ pnpm --filter @helper/client vitest run src/renderer/
 ### Health Check
 
 ```bash
-curl http://178.172.137.167:3001/api/health
+curl http://2.26.80.138:3001/api/health
 ```
 
 Expected: `{ status: "ok", routes: { poe: { auth: [...], builds: [...], accounts: [...] } } }`
@@ -63,7 +63,7 @@ Expected: `{ status: "ok", routes: { poe: { auth: [...], builds: [...], accounts
 ### Automated Check
 
 ```bash
-npx tsx scripts/check-poe-production.ts http://178.172.137.167:3001
+npx tsx scripts/check-poe-production.ts http://2.26.80.138:3001
 ```
 
 ### Test Coverage Gaps

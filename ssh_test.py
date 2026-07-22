@@ -5,7 +5,7 @@ import io
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
-host = '178.172.137.167'
+host = '2.26.80.138'
 username = 'root'
 password = 'qF9{t2b^{C'
 

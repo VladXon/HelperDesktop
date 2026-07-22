@@ -126,7 +126,7 @@ async function main(): Promise<void> {
   attachWebSocket(server);
 
   let bot: BotManager | null = null;
-  if (process.env.BOT_TOKEN) {
+  if (process.env.BOT_TOKEN && process.env.HELPER_BOT_AUTOSTART !== '0') {
     bot = new BotManager({
       botPath: config.botPath,
       serverUrl: `http://localhost:${config.port}`,
@@ -134,7 +134,7 @@ async function main(): Promise<void> {
     });
     bot.start();
   } else {
-    log.startup('BOT_TOKEN not set — bot not started');
+    log.startup('BOT_TOKEN not set or PM2-managed — bot not started internally');
   }
 
   let shuttingDown = false;

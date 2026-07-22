@@ -90,6 +90,7 @@ Key rules:
 - Only deploy server + bot. Never deploy Electron client.
 - All SSH via `task` subagent. No direct SSH commands.
 - Push to GitHub, not VPS. VPS pulls from GitHub.
+- **When touching server (`apps/server`) or bot (`apps/bot`) code: immediately commit, push, deploy to VPS, and verify there.** Do not leave server changes undeployed.
 - Require confirmation for: file deletion, DB destruction, risky migrations, production restart.
 - Never expose passwords, tokens, private keys.
 

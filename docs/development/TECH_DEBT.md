@@ -54,7 +54,7 @@ Priorities: **Critical** → **High** → **Medium** → **Low**
 
 **Category**: Security  
 **File**: `apps/client/src/main/utils/http-client.ts:9`  
-**Issue**: `DEFAULT_SERVER_URL = 'http://178.172.137.167:3001'` sends Bearer tokens and passwords over plain HTTP.
+**Issue**: `DEFAULT_SERVER_URL = 'http://2.26.80.138:3001'` sends Bearer tokens and passwords over plain HTTP.
 **Fix**: Default to `https://`. Add warning for non-HTTPS URLs.
 
 ### C8. Token encryption silently falls back to plaintext

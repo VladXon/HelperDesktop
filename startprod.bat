@@ -17,7 +17,7 @@ call pnpm --filter @helper/client build
 if errorlevel 1 goto :error
 
 echo Starting HelperDesktop in PRODUCTION mode...
-echo Server: VPS (178.172.137.167:3001)
+echo Server: VPS (2.26.80.138:3001)
 echo.
 
 cd apps\client

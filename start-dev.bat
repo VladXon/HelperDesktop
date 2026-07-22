@@ -32,7 +32,7 @@ if not exist "apps\server\helperdesktop.db" (
 echo Starting HelperDesktop in DEV mode...
 echo.
 echo Client: Vite on http://localhost:5173
-echo Server: VPS (178.172.137.167:3001)
+echo Server: VPS (2.26.80.138:3001)
 echo Bot:    on VPS
 echo.
 

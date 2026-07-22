@@ -3,7 +3,7 @@
 ## Server Base URL
 
 ```
-http://178.172.137.167:3001
+http://2.26.80.138:3001
 ```
 
 ## Authentication

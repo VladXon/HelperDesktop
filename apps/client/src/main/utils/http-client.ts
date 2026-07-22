@@ -1,6 +1,6 @@
 import { app, net } from 'electron';
 import { join } from 'node:path';
-import { getActiveAccount, readAuthStorage, readDeviceId, writeAuthStorage } from './safe-storage.js';
+import { clearAuthStorage, getActiveAccount, readAuthStorage, readDeviceId, writeAuthStorage } from './safe-storage.js';
 import { readJson, writeJson } from './safe-storage.js';
 import type { ServerUrlFile } from './types.js';
 
@@ -44,6 +44,8 @@ export async function getServerUrl(): Promise<string> {
   if (migrated !== cachedServerUrl) {
     cachedServerUrl = migrated;
     await writeJson(SERVER_URL_FILE, { url: migrated });
+    await clearAuthStorage();
+    console.warn('[helper] Server URL changed; cleared stored auth tokens — please login again');
   }
   return cachedServerUrl;
 }

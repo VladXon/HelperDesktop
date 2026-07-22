@@ -2,14 +2,13 @@
 
 ## VPS Infrastructure
 
-Two VPS servers:
+Single VPS server running everything:
 
 | Role | Server | IP |
 |------|--------|-----|
-| App Server | VPS1 (Belarus) | `178.172.137.167` |
-| Database | VPS2 (Germany) | `2.26.80.138` |
+| App + DB | VPS (Germany) | `2.26.80.138` |
 
-App server runs: Express API + nginx reverse proxy + PM2. Database server runs: PostgreSQL 16.
+Runs: Express API + PostgreSQL 16 + PM2 + Telegram Bot.
 
 ## Deploy Process
 
@@ -17,19 +16,20 @@ App server runs: Express API + nginx reverse proxy + PM2. Database server runs: 
 # 1. Push to GitHub
 git push origin main
 
-# 2. SSH to VPS1
-ssh user@178.172.137.167
+# 2. SSH to VPS
+ssh root@2.26.80.138
 
 # 3. Pull + build + migrate
-cd /opt/helperdesktop
+cd /opt/helper
 git pull
-pnpm install
-pnpm build
-cd apps/server
-drizzle-kit migrate
+pnpm install --frozen-lockfile
+pnpm --filter @helper/shared build
+pnpm --filter @helper/poe-backend build
+pnpm --filter @helper/server build
+pnpm --filter @helper/server db:migrate
 
 # 4. Restart via PM2
-pm2 reload all
+pm2 reload ecosystem.config.cjs
 ```
 
 ## PM2 Configuration
