@@ -10,7 +10,7 @@ export interface ResolvedSkillSnapshot {
   effectiveness: number;
   attackTime: number | null;
   castTime: number | null;
-  conversion: { from: string; to: string; percent: number }[];
+  conversion: { from: string; to: string; percent: number; kind?: string }[];
   supportMultiplier: { more: number; increased: number };
 }
 
@@ -52,7 +52,7 @@ function resolveSkills(skills: SkillSetup[]): ResolvedSkillSnapshot[] {
         effectiveness: gem.effectiveness,
         attackTime: gem.attackTime,
         castTime: gem.castTime,
-        conversion: gem.conversion.map((c: { from: string; to: string; percent: number }) => ({ from: c.from, to: c.to, percent: c.percent })),
+        conversion: gem.conversion.map((c: { from: string; to: string; percent: number; kind?: string }) => ({ from: c.from, to: c.to, percent: c.percent, kind: c.kind })),
         supportMultiplier: {
           more: Math.round((moreTotal - 1) * 1000) / 10,
           increased: Math.round(increasedTotal * 10) / 10,

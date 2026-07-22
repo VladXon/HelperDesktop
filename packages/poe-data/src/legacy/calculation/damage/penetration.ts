@@ -2,24 +2,29 @@ import type { ResolvedCharacterStats } from '../../stats/models/character-stats.
 import type { DamageBreakdown } from './damage.types.js';
 import { createBreakdown } from './damage.types.js';
 
+export interface PenetrationResult {
+  breakdown: DamageBreakdown;
+  penetrationByType: Record<string, number>;
+}
+
 export function applyPenetration(
   breakdown: DamageBreakdown,
   stats: ResolvedCharacterStats,
-): DamageBreakdown {
+): PenetrationResult {
+  const penetrationByType: Record<string, number> = {};
   const components = breakdown.components.map((comp) => {
     const pen = getPenetration(comp.type, stats);
-    if (pen === 0) return comp;
-
-    const resistanceToZero = Math.min(comp.value * (Math.abs(pen) / 100), comp.value);
-    const effectiveness = comp.value + (pen > 0 ? resistanceToZero : -resistanceToZero);
-
-    return { ...comp, value: Math.max(0, effectiveness) };
+    penetrationByType[comp.type] = pen;
+    return comp;
   });
 
-  return createBreakdown(components, {
-    ...breakdown.contributions,
-    penetrated: components.reduce((s, c) => s + c.value, 0),
-  });
+  return {
+    breakdown: createBreakdown(components, {
+      ...breakdown.contributions,
+      penetrated: components.reduce((s, c) => s + c.value, 0),
+    }),
+    penetrationByType,
+  };
 }
 
 function getPenetration(type: string, stats: ResolvedCharacterStats): number {

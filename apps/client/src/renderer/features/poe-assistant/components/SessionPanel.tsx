@@ -92,7 +92,8 @@ export function SessionPanel(): React.JSX.Element {
 
 export function CharacterViewer(): React.JSX.Element {
   const { data: session } = usePoeSession();
-  const { data: characters, isLoading, error } = useCharacters();
+  const sessionValid = Boolean(session?.configured && session?.valid);
+  const { data: characters, isLoading, error } = useCharacters(sessionValid);
 
   if (!session?.configured || !session?.valid) {
     return (

@@ -1,4 +1,4 @@
-import type { CommandDef } from '../layout';
+import type { CommandDef } from '../layout/components/CommandPalette.types';
 
 export { SettingsPage } from './components/SettingsPage';
 export { AccountSection } from './components/AccountSection';

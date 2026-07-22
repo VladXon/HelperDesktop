@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { opSchema } from '@helper/shared/schemas/dev';
 import { config } from '../config.js';
 import { getDb, schema } from '../db/index.js';
-import { gracefulShutdown } from '../index.js';
+import { getGracefulShutdown } from '../utils/shutdown.js';
 import { requireAuth, requireDev } from '../middleware/auth.js';
 import { HttpError } from '../middleware/error-handler.js';
 import { audit } from '../services/audit.js';
@@ -67,7 +67,7 @@ export function createDevRouter(): Router {
         log.error('restart spawn failed', { error: (e as Error).message });
       }
       res.json({ ok: true });
-      gracefulShutdown?.();
+      getGracefulShutdown()?.();
     } catch (e) {
       next(e);
     }

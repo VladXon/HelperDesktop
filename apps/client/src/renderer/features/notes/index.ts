@@ -1,4 +1,4 @@
-import type { CommandDef } from '../layout';
+import type { CommandDef } from '../layout/components/CommandPalette.types';
 
 export { NotesPage } from './components/NotesPage';
 export { NoteCard } from './components/NoteCard';

@@ -1,0 +1,19 @@
+HTTP/1.1 200 OK
+Date: Wed, 22 Jul 2026 14:23:10 GMT
+Content-Type: application/json
+Transfer-Encoding: chunked
+Connection: keep-alive
+Server: cloudflare
+vary: accept-encoding
+Access-Control-Expose-Headers: X-Rate-Limit-Policy, X-Rate-Limit-Rules, X-Rate-Limit-Account, X-Rate-Limit-Account-State, X-Rate-Limit-Ip, X-Rate-Limit-Ip-State
+X-Rate-Limit-Policy: backend-character-request-limit
+X-Rate-Limit-Rules: Account,Ip
+X-Rate-Limit-Account: 10:60:60,50:1800:600
+X-Rate-Limit-Account-State: 2:60:0,15:1800:0
+X-Rate-Limit-Ip: 30:60:120,120:1800:600
+X-Rate-Limit-Ip-State: 2:60:0,16:1800:0
+X-Frame-Options: SAMEORIGIN
+Strict-Transport-Security: max-age=63115200; includeSubDomains; preload
+cf-cache-status: DYNAMIC
+CF-RAY: a1f31a05da5634d0-WAW
+

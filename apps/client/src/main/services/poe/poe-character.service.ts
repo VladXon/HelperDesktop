@@ -98,6 +98,10 @@ interface GggItem {
   implicitMods?: string[];
   craftedMods?: string[];
   enchantMods?: string[];
+  fracturedMods?: string[];
+  scourgeMods?: string[];
+  veiledMods?: string[];
+  incubatedMods?: string[];
   frameType: number;
   sockets?: Array<{ group: number; attr: string; sColour: string }>;
 }
@@ -334,7 +338,16 @@ function extractItems(gggItems: GggItem[]): EquippedItem[] {
         baseType: gggItem.typeLine,
         rarity: frameTypeToRarity(gggItem.frameType),
       },
-      rawMods: [],
+      rawMods: [
+        ...(gggItem.implicitMods ?? []).map((text) => ({ name: text, values: [] as string[], domain: 'implicit' })),
+        ...(gggItem.explicitMods ?? []).map((text) => ({ name: text, values: [] as string[], domain: 'explicit' })),
+        ...(gggItem.craftedMods ?? []).map((text) => ({ name: text, values: [] as string[], domain: 'crafted' })),
+        ...(gggItem.enchantMods ?? []).map((text) => ({ name: text, values: [] as string[], domain: 'enchant' })),
+        ...(gggItem.fracturedMods ?? []).map((text) => ({ name: text, values: [] as string[], domain: 'fractured' })),
+        ...(gggItem.scourgeMods ?? []).map((text) => ({ name: text, values: [] as string[], domain: 'explicit' })),
+        ...(gggItem.veiledMods ?? []).map((text) => ({ name: text, values: [] as string[], domain: 'veiled' })),
+        ...(gggItem.incubatedMods ?? []).map((text) => ({ name: text, values: [] as string[], domain: 'explicit' })),
+      ],
       computedStats: {
         armour: 0,
         evasion: 0,

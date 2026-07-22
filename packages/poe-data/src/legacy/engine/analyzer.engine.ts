@@ -77,10 +77,19 @@ function computeScores(
 
 function detectMainSkill(build: Build): { name: string; effectiveness: number } {
   const enabledSkills = build.skills.filter((s) => s.isEnabled && s.activeGem.name);
-  if (enabledSkills.length > 0) {
-    return { name: enabledSkills[0]!.activeGem.name, effectiveness: 1.0 };
+  if (enabledSkills.length === 0) return { name: 'Unknown', effectiveness: 1.0 };
+
+  // Pick skill with most support gems (highest link count)
+  let bestSkill = enabledSkills[0]!;
+  let maxLinks = 0;
+  for (const skill of enabledSkills) {
+    const linkCount = (skill.supportGems?.length ?? 0) + 1; // +1 for active gem
+    if (linkCount > maxLinks) {
+      maxLinks = linkCount;
+      bestSkill = skill;
+    }
   }
-  return { name: 'Unknown', effectiveness: 1.0 };
+  return { name: bestSkill.activeGem.name, effectiveness: 1.0 };
 }
 
 export function analyze(build: Build, context?: Partial<AnalysisContext>): AnalysisResult {

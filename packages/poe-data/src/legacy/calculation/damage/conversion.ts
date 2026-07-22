@@ -23,7 +23,7 @@ export function applyConversion(
       from: conv.from as DamageType,
       to: conv.to as DamageType,
       percent: conv.percent,
-      kind: 'conversion' as const,
+      kind: (conv.kind === 'addedAsExtra' || conv.kind === 'gainedAsExtra') ? conv.kind : 'conversion',
     });
   }
 

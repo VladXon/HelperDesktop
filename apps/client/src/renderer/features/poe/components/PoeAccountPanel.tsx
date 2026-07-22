@@ -1,13 +1,7 @@
 import type * as React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../../../components/ui/button';
-import { Plug, X, ArrowCircleDown } from '@phosphor-icons/react';
-
-interface PoeAccountInfo {
-  id: number;
-  accountName: string;
-  connected: boolean;
-}
+import { Plug, X, ArrowCircleDown, Key } from '@phosphor-icons/react';
 
 interface CharacterInfo {
   name: string;
@@ -22,33 +16,37 @@ interface PoeAccountPanelProps {
 }
 
 export function PoeAccountPanel({ onImportCharacter, isImporting }: PoeAccountPanelProps): React.JSX.Element {
-  const [accounts, setAccounts] = useState<PoeAccountInfo[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [session, setSession] = useState<{ configured: boolean; valid: boolean; accountName: string | null } | null>(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
   const [characters, setCharacters] = useState<CharacterInfo[]>([]);
   const [selectedCharacter, setSelectedCharacter] = useState<string>('');
   const [fetchingChars, setFetchingChars] = useState(false);
   const [charError, setCharError] = useState<string | null>(null);
 
-  const loadAccounts = async () => {
-    setLoading(true);
+  const loadSession = useCallback(async () => {
+    setSessionLoading(true);
     try {
-      const list = await window.api.poe.getAccounts();
-      setAccounts(list);
+      const s = await window.api.poe.getSession();
+      setSession(s);
+      if (s.configured && s.valid) {
+        loadLocalCharacters();
+      }
     } catch {
-      void 0;
+      setSession(null);
     } finally {
-      setLoading(false);
+      setSessionLoading(false);
     }
-  };
+  }, []);
 
-  const loadCharacters = async () => {
+  const loadLocalCharacters = async () => {
     setFetchingChars(true);
     setCharError(null);
     try {
-      const result = await window.api.poe.fetchOAuthCharacters();
-      setCharacters(result.characters ?? []);
-      if (result.characters && result.characters.length > 0 && !selectedCharacter) {
-        setSelectedCharacter(result.characters[0]!.name);
+      const result = await window.api.poe.fetchCharacters();
+      const chars = (result as CharacterInfo[]) ?? [];
+      setCharacters(chars);
+      if (chars.length > 0 && !selectedCharacter) {
+        setSelectedCharacter(chars[0]!.name);
       }
     } catch {
       setCharError('Failed to fetch characters');
@@ -58,38 +56,25 @@ export function PoeAccountPanel({ onImportCharacter, isImporting }: PoeAccountPa
   };
 
   useEffect(() => {
-    loadAccounts();
-  }, []);
+    loadSession();
+  }, [loadSession]);
 
-  useEffect(() => {
-    if (accounts.length > 0) {
-      loadCharacters();
-    } else {
-      setCharacters([]);
-      setSelectedCharacter('');
-    }
-  }, [accounts.length]);
-
-  const handleConnect = async () => {
-    try {
-      await window.api.poe.connectAccount();
-      setTimeout(loadAccounts, 2000);
-    } catch {
-      void 0;
-    }
+  const handleOpenSession = () => {
+    window.dispatchEvent(new CustomEvent('poe:open-session'));
   };
 
-  const handleDisconnect = async (id: number) => {
+  const handleDisconnect = async () => {
     try {
-      await window.api.poe.disconnectAccount(id);
-      setAccounts((prev) => prev.filter((a) => a.id !== id));
+      await window.api.poe.clearSession();
+      setSession(null);
+      setCharacters([]);
     } catch {
       void 0;
     }
   };
 
   const handleRefresh = () => {
-    loadCharacters();
+    loadLocalCharacters();
   };
 
   const handleImport = () => {
@@ -101,26 +86,27 @@ export function PoeAccountPanel({ onImportCharacter, isImporting }: PoeAccountPa
     <div className="rounded-lg border border-white/10 bg-white/[0.03] backdrop-blur-xl p-6">
       <h3 className="text-headline-md font-semibold text-text-primary mb-4">Path of Exile Account</h3>
 
-      {loading ? (
-        <p className="text-body-md text-text-muted animate-pulse">Loading...</p>
-      ) : accounts.length > 0 ? (
+      {sessionLoading ? (
+        <p className="text-body-md text-text-muted animate-pulse">Loading session...</p>
+      ) : session?.configured ? (
         <div className="space-y-4">
-          {accounts.map((a) => (
-            <div key={a.id} className="flex items-center justify-between p-3 rounded-lg border border-white/5 bg-white/[0.02]">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-green-400" />
-                <span className="text-body-md text-text-primary">{a.accountName}</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleDisconnect(a.id)}
-                className="p-1.5 rounded hover:bg-red-400/10 text-text-muted hover:text-red-400 transition-colors"
-                title="Disconnect"
-              >
-                <X size={16} />
-              </button>
+          <div className="flex items-center justify-between p-3 rounded-lg border border-white/5 bg-white/[0.02]">
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${session.valid ? 'bg-green-400' : 'bg-yellow-400'}`} />
+              <span className="text-body-md text-text-primary">{session.accountName ?? 'Connected'}</span>
+              <span className={`text-label-sm px-2 py-0.5 rounded ${session.valid ? 'bg-green-400/10 text-green-400' : 'bg-yellow-400/10 text-yellow-400'}`}>
+                {session.valid ? 'Active' : 'Expired'}
+              </span>
             </div>
-          ))}
+            <button
+              type="button"
+              onClick={handleDisconnect}
+              className="p-1.5 rounded hover:bg-red-400/10 text-text-muted hover:text-red-400 transition-colors"
+              title="Disconnect"
+            >
+              <X size={16} />
+            </button>
+          </div>
 
           <div className="border-t border-white/5 pt-3">
             {fetchingChars ? (
@@ -171,10 +157,10 @@ export function PoeAccountPanel({ onImportCharacter, isImporting }: PoeAccountPa
         </div>
       ) : (
         <div className="flex flex-col items-center gap-3 py-4">
-          <Plug size={24} className="text-text-muted" />
+          <Key size={24} className="text-text-muted" />
           <p className="text-body-md text-text-muted text-center">Connect your PoE account to import characters directly</p>
-          <Button onClick={handleConnect} variant="outline" size="sm" className="gap-2">
-            Connect Path of Exile
+          <Button onClick={handleOpenSession} variant="outline" size="sm" className="gap-2">
+            <Plug size={16} /> Setup PoE Session
           </Button>
         </div>
       )}

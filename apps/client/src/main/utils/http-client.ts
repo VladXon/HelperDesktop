@@ -121,6 +121,32 @@ async function saveRefreshedTokens(newToken: string, newRefresh: string): Promis
   await writeAuthStorage({ ...storage, accounts: updated });
 }
 
+let refreshPromise: Promise<boolean> | null = null;
+
+async function doRefresh(): Promise<boolean> {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = (async () => {
+    try {
+      const acc = await getActiveAccount();
+      if (!acc) return false;
+      const refreshed = await refreshToken(acc.refreshToken);
+      if (refreshed) {
+        await saveRefreshedTokens(refreshed.token, refreshed.refreshToken);
+        return true;
+      }
+      const storage = await readAuthStorage();
+      if (storage.activeAccount) {
+        const updated = storage.accounts.filter((a) => a.login !== storage.activeAccount);
+        await writeAuthStorage({ ...storage, activeAccount: null, accounts: updated });
+      }
+      return false;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+  return refreshPromise;
+}
+
 export async function apiFetch<T>(path: string, opts: ApiFetchOptions = {}): Promise<T> {
   const { method = 'GET', body, auth = true, skipRefresh = false, raw = false } = opts;
   const baseUrl = await getServerUrl();
@@ -158,19 +184,12 @@ export async function apiFetch<T>(path: string, opts: ApiFetchOptions = {}): Pro
     throw new HttpError(0, null, err instanceof TypeError ? `Network error: ${err.message}` : `Request failed: ${String(err)}`);
   }
   if (res.status === 401 && auth && !skipRefresh && access) {
-    const acc = await getActiveAccount();
-    if (acc) {
-      const refreshed = await refreshToken(acc.refreshToken);
-      if (refreshed) {
-        await saveRefreshedTokens(refreshed.token, refreshed.refreshToken);
-        headers.authorization = `Bearer ${refreshed.token}`;
+    const ok = await doRefresh();
+    if (ok) {
+      const acc = await getActiveAccount();
+      if (acc) {
+        headers.authorization = `Bearer ${acc.accessToken}`;
         res = await net.fetch(url, { ...init, headers });
-      } else {
-        const storage = await readAuthStorage();
-        if (storage.activeAccount) {
-          const updated = storage.accounts.filter((a) => a.login !== storage.activeAccount);
-          await writeAuthStorage({ ...storage, activeAccount: null, accounts: updated });
-        }
       }
     }
   }

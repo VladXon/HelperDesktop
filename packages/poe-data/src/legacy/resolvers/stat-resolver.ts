@@ -167,6 +167,8 @@ export function aggregateMods(mods: Modifier[]): ComputedItemStats {
   if (elementalAttackDmg > 0) increasedDamage['elemental_attack'] = elementalAttackDmg;
   if (spellDmg > 0) increasedDamage['spell'] = spellDmg;
   if (attackDmg > 0) increasedDamage['attack'] = attackDmg;
+  const increasedLife = g('increasedLife');
+  if (increasedLife > 0) increasedDamage['life'] = increasedLife;
 
   const implicits = mods.filter((m) => m.domain === 'implicit');
   const explicits = mods.filter((m) => m.domain === 'explicit');

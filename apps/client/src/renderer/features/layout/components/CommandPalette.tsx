@@ -15,14 +15,7 @@ import { presetsCommands } from '../../presets';
 import { settingsCommands } from '../../settings';
 import { poeCommands } from '../../poe-assistant';
 import { poeAnalyzerCommands } from '../../poe';
-
-export interface CommandDef {
-  id: string;
-  label: string;
-  section: 'Pages' | 'Notes' | 'Presets' | 'PoE' | 'PoE Analyzer' | 'Settings';
-  keywords?: string[];
-  action: () => void;
-}
+import type { CommandDef } from './CommandPalette.types';
 
 export function CommandPalette(): React.JSX.Element {
   const { isCommandPaletteOpen, closeCommandPalette, navigate } = useRouter();

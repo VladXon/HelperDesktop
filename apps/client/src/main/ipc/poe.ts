@@ -1,4 +1,4 @@
-import { ipcMain, shell, session as electronSession } from 'electron';
+import { ipcMain, net, shell, session as electronSession } from 'electron';
 import { createPoeAccountService } from '../services/poe/poe-account.service.js';
 import { createPoeTradeService } from '../services/poe/poe-trade.service.js';
 import { createPoeImportService } from '../services/poe/poe-import.service.js';
@@ -17,6 +17,34 @@ import {
 import { isNewAuthEnabled } from '../services/poe/auth/feature-flag.js';
 import type { IGggAuthenticator, AuthAttemptLog } from '../services/poe/auth/authenticator.js';
 
+const ANALYZE_TIMEOUT_MS = 60_000;
+const GGG_WWW = 'https://www.pathofexile.com';
+
+function gggRequest<T>(endpoint: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const url = endpoint.startsWith('http') ? endpoint : `${GGG_WWW}${endpoint}`;
+    const request = net.request({ url, method: 'GET', useSessionCookies: true });
+    request.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+    request.setHeader('Accept', 'application/json, text/plain, */*');
+
+    let body = '';
+    request.on('response', (res) => {
+      res.on('data', (chunk) => { body += chunk.toString(); });
+      res.on('end', () => {
+        if (res.statusCode !== 200) {
+          reject(new Error(`GGG API ${res.statusCode}: ${body.slice(0, 300)}`));
+        } else {
+          try { resolve(JSON.parse(body) as T); }
+          catch { reject(new Error(`Invalid JSON: ${body.slice(0, 100)}`)); }
+        }
+      });
+      res.on('error', reject);
+    });
+    request.on('error', reject);
+    request.end();
+  });
+}
+
 let _poeInitialized = false;
 let _modDb: ModDB | null = null;
 let _newAuth: IGggAuthenticator | null = null;
@@ -33,6 +61,8 @@ function getNewAuth(): IGggAuthenticator {
 
 /** Устанавливает POESESSID во все authenticators + в default Chromium session */
 async function setNewAuthPoesessid(poesessid: string): Promise<void> {
+  poesessid = poesessid.trim();
+  if (poesessid.length > 256) throw new Error('POESESSID value too long');
   const poeAuth = getPoesessidAuth();
   const bwAuth = getBrowserWindowAuth();
   if (poeAuth) poeAuth.setPoesessid(poesessid);
@@ -142,9 +172,10 @@ export function registerPoeIpc(): void {
 
   // ── Trade / data ────────────────────────────────────────────────
   ipcMain.handle('poe:get-leagues', () => trade.getLeagues());
-  ipcMain.handle('poe:fetch-exchange-rate', (_e, league: string, have: string, want: string) =>
-    trade.fetchExchangeRate(league, have, want),
-  );
+  ipcMain.handle('poe:fetch-exchange-rate', async (_e, league: string, have: string, want: string) => {
+    console.log(`[IPC] poe:fetch-exchange-rate(league=${league}, have=${have}, want=${want})`);
+    return trade.fetchExchangeRate(league, have, want);
+  });
   ipcMain.handle('poe:search-items', (_e, league: string, query: Record<string, unknown>) =>
     trade.searchItems(league, query),
   );
@@ -159,23 +190,14 @@ export function registerPoeIpc(): void {
   } else {
     ipcMain.handle('poe:fetch-characters', async () => {
       const auth = getNewAuth();
-      const valid = await auth.validate();
-      if (!valid.valid) throw new Error('Session expired or not configured');
-
-      // TODO: integrate trade service with new auth — for now, fall back to account service
-      const ses = await account.getSessionId();
-      if (!ses) throw new Error('Cannot read POESESSID from legacy storage');
-      return account.fetchCharacters();
+      const headers = await auth.authenticate();
+      return gggRequest<unknown[]>('/character-window/get-characters');
     });
 
     ipcMain.handle('poe:fetch-stash-items', async (_e, league: string, tabIndex: number) => {
       const auth = getNewAuth();
-      const valid = await auth.validate();
-      if (!valid.valid) throw new Error('Session expired or not configured');
-
-      const ses = await account.getSessionId();
-      if (!ses) throw new Error('Cannot read POESESSID from legacy storage');
-      return account.fetchStashItems(league, tabIndex);
+      await auth.authenticate();
+      return gggRequest<unknown>(`/character-window/get-stash-items?league=${encodeURIComponent(league)}&tabs=1&tabIndex=${tabIndex}`);
     });
   }
 
@@ -319,105 +341,114 @@ export function registerPoeIpc(): void {
 
   // ── Analyze character ───────────────────────────────────────────
   ipcMain.handle('poe:analyze-character', async (_e, characterName: string) => {
-    const poesessid = getPoesessidAuth()?.getPoesessid();
-    const accountName = poesessid ? await getPoesessidAuth()!.getAccountName() : null;
+    const handle = async () => {
+      const poesessid = getPoesessidAuth()?.getPoesessid();
+      const accountName = poesessid ? await getPoesessidAuth()!.getAccountName() : null;
 
-    const [detail, passiveTreeSnapshot] = await Promise.all([
-      poesessid && accountName
-        ? gggProvider.getCharacterDetail(poesessid, characterName, accountName).catch((err: Error) => {
-            console.warn('[poe:analyze] character detail fetch failed:', err.message);
-            return null;
-          })
-        : Promise.resolve(null),
-      poesessid && accountName
-        ? fetchPassiveSkills(accountName, characterName, poesessid).catch((err: Error) => {
-            console.warn('[poe:analyze] passive tree fetch failed:', err.message);
-            return null;
-          })
-        : Promise.resolve(null),
-    ]);
+      const [detail, passiveTreeSnapshot] = await Promise.all([
+        poesessid && accountName
+          ? gggProvider.getCharacterDetail(poesessid, characterName, accountName).catch((err: Error) => {
+              console.warn('[poe:analyze] character detail fetch failed:', err.message);
+              return null;
+            })
+          : Promise.resolve(null),
+        poesessid && accountName
+          ? fetchPassiveSkills(accountName, characterName, poesessid).catch((err: Error) => {
+              console.warn('[poe:analyze] passive tree fetch failed:', err.message);
+              return null;
+            })
+          : Promise.resolve(null),
+      ]);
 
-    if (!detail) {
+      if (!detail) {
+        return {
+          import: {
+            buildSummary: { name: characterName, ascendancy: null, level: 0 },
+            modifierCount: 0,
+          },
+          analysis: {
+            offense: {
+              mainSkill: { name: '—', hitRate: 0, averageHit: 0, penetration: 0 },
+              totalDps: 0, bossDps: 0, uberDps: 0,
+              damageBreakdown: { physical: 0, fire: 0, cold: 0, lightning: 0, chaos: 0 },
+              penetration: 0, resistanceReduction: 0,
+              critChance: 0, critMultiplier: 0, attackSpeed: 0,
+              isDotBuild: false, dotDps: 0, witherStacks: 0, shockEffect: 0,
+            },
+            defense: {
+              life: 0, energyShield: 0, combinedPool: 0,
+              resistances: {
+                fire: { uncapped: 0, capped: 0, overcap: 0 },
+                cold: { uncapped: 0, capped: 0, overcap: 0 },
+                lightning: { uncapped: 0, capped: 0, overcap: 0 },
+                chaos: { uncapped: 0, capped: 0, overcap: 0 },
+              },
+              maxResistances: { fire: 0, cold: 0, lightning: 0 },
+              armour: 0, physicalReduction: 0, evasion: 0, evadeChance: 0,
+              block: { attack: 0, spell: 0 },
+              spellSuppression: 0,
+              ehp: { physicalMaxHit: 0, elementalMaxHit: 0, chaosMaxHit: 0 },
+              ailmentImmunity: {},
+            },
+            scaling: {
+              primaryScalar: '—', secondaryScalars: [],
+              diminishingReturns: [], gemLevelImpact: 0, criticalScalingEfficiency: 0,
+            },
+            problems: [], recommendations: [],
+            scores: { overall: 0, offense: 0, defense: 0, sustain: 0, mapping: 0, bossing: 0, leagueStart: 0, scaling: 0 },
+            metadata: { analyzerVersion: '', calculationVersion: '', patchVersion: '', analyzedAt: 0, buildHash: '' },
+          },
+          explanation: null,
+          passiveTree: passiveTreeSnapshot,
+        };
+      }
+
+      const gggDetail = detail as unknown as GggCharacterDetail;
+      const { build, modifiers, passiveTree } = convertCharacterToBuild(gggDetail);
+
+      if (passiveTreeSnapshot) {
+        build.passiveTree = passiveTreeSnapshot;
+      }
+
+      const analysisResult = await analysis.analyze({ build, modifiers });
+
       return {
         import: {
-          buildSummary: { name: characterName, ascendancy: null, level: 0 },
-          modifierCount: 0,
+          buildSummary: {
+            name: gggDetail.character.name ?? characterName,
+            ascendancy: build.character.ascendancy,
+            level: build.character.level,
+          },
+          modifierCount: modifiers.length,
         },
         analysis: {
-          offense: {
-            mainSkill: { name: '—', hitRate: 0, averageHit: 0, penetration: 0 },
-            totalDps: 0, bossDps: 0, uberDps: 0,
-            damageBreakdown: { physical: 0, fire: 0, cold: 0, lightning: 0, chaos: 0 },
-            penetration: 0, resistanceReduction: 0,
-            critChance: 0, critMultiplier: 0, attackSpeed: 0,
-            isDotBuild: false, dotDps: 0, witherStacks: 0, shockEffect: 0,
-          },
-          defense: {
-            life: 0, energyShield: 0, combinedPool: 0,
-            resistances: {
-              fire: { uncapped: 0, capped: 0, overcap: 0 },
-              cold: { uncapped: 0, capped: 0, overcap: 0 },
-              lightning: { uncapped: 0, capped: 0, overcap: 0 },
-              chaos: { uncapped: 0, capped: 0, overcap: 0 },
-            },
-            maxResistances: { fire: 0, cold: 0, lightning: 0 },
-            armour: 0, physicalReduction: 0, evasion: 0, evadeChance: 0,
-            block: { attack: 0, spell: 0 },
-            spellSuppression: 0,
-            ehp: { physicalMaxHit: 0, elementalMaxHit: 0, chaosMaxHit: 0 },
-            ailmentImmunity: {},
-          },
-          scaling: {
-            primaryScalar: '—', secondaryScalars: [],
-            diminishingReturns: [], gemLevelImpact: 0, criticalScalingEfficiency: 0,
-          },
-          problems: [], recommendations: [],
-          scores: { overall: 0, offense: 0, defense: 0, sustain: 0, mapping: 0, bossing: 0, leagueStart: 0, scaling: 0 },
-          metadata: { analyzerVersion: '', calculationVersion: '', patchVersion: '', analyzedAt: 0, buildHash: '' },
+          offense: analysisResult.legacy.facts.offense,
+          defense: analysisResult.legacy.facts.defense,
+          scaling: analysisResult.legacy.facts.scaling,
+          problems: analysisResult.legacy.insights.problems.map((p) => ({
+            severity: p.severity, message: p.message, category: p.category,
+          })),
+          recommendations: analysisResult.legacy.insights.recommendations.map((r) => ({
+            itemSlot: r.itemSlot, upgradePriority: r.upgradePriority,
+            targetStats: r.targetStats, estimatedBudgetLow: r.estimatedBudgetLow,
+            estimatedBudgetHigh: r.estimatedBudgetHigh, improvementPercent: r.improvementPercent,
+          })),
+          scores: analysisResult.legacy.scores,
+          metadata: analysisResult.legacy.metadata,
         },
-        explanation: null,
-        passiveTree: passiveTreeSnapshot,
+        explanation: analysisResult.explanation
+          ? { summary: analysisResult.explanation.summary }
+          : null,
+        passiveTree,
       };
-    }
-
-    const gggDetail = detail as unknown as GggCharacterDetail;
-    const { build, modifiers, passiveTree } = convertCharacterToBuild(gggDetail);
-
-    if (passiveTreeSnapshot) {
-      build.passiveTree = passiveTreeSnapshot;
-    }
-
-    const analysisResult = await analysis.analyze({ build, modifiers });
-
-    return {
-      import: {
-        buildSummary: {
-          name: gggDetail.character.name ?? characterName,
-          ascendancy: build.character.ascendancy,
-          level: build.character.level,
-        },
-        modifierCount: modifiers.length,
-      },
-      analysis: {
-        offense: analysisResult.legacy.facts.offense,
-        defense: analysisResult.legacy.facts.defense,
-        scaling: analysisResult.legacy.facts.scaling,
-        problems: analysisResult.legacy.insights.problems.map((p) => ({
-          severity: p.severity, message: p.message, category: p.category,
-        })),
-        recommendations: analysisResult.legacy.insights.recommendations.map((r) => ({
-          itemSlot: r.itemSlot, upgradePriority: r.upgradePriority,
-          targetStats: r.targetStats, estimatedBudgetLow: r.estimatedBudgetLow,
-          estimatedBudgetHigh: r.estimatedBudgetHigh, improvementPercent: r.improvementPercent,
-        })),
-        scores: analysisResult.legacy.scores,
-        metadata: analysisResult.legacy.metadata,
-      },
-      explanation: analysisResult.explanation
-        ? { summary: analysisResult.explanation.summary }
-        : null,
-      passiveTree,
     };
+
+    return Promise.race([
+      handle(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Character analysis timed out after 60s')), ANALYZE_TIMEOUT_MS),
+      ),
+    ]);
   });
 
   // ── Character API ───────────────────────────────────────────────

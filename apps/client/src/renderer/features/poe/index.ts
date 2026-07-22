@@ -1,4 +1,4 @@
-import type { CommandDef } from '../layout';
+import type { CommandDef } from '../layout/components/CommandPalette.types';
 
 export { PoeAnalyzerPage } from './pages/PoeAnalyzerPage';
 export { usePoeAnalyzer } from './hooks/usePoeAnalyzer';

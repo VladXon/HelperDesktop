@@ -1,4 +1,4 @@
-import type { CommandDef } from '../layout';
+import type { CommandDef } from '../layout/components/CommandPalette.types';
 
 export { PresetsPage } from './components/PresetsPage';
 export { PresetCard } from './components/PresetCard';

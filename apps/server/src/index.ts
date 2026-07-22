@@ -21,6 +21,9 @@ import { attachWebSocket } from './ws.js';
 import { BotManager } from './services/bot-manager.js';
 import { startCleanupJob } from './services/cleanup.js';
 import { getDb, pingDb, closePool } from './db/index.js';
+import { setGracefulShutdown } from './utils/shutdown.js';
+import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 import './db/index.js';
 
 export function createApp(): Express {
@@ -164,10 +167,8 @@ async function main(): Promise<void> {
   process.on('SIGINT', () => shutdown('SIGINT'));
 
   gracefulShutdown = () => shutdown('restart');
+  setGracefulShutdown(gracefulShutdown);
 }
-
-import { fileURLToPath } from 'node:url';
-import { resolve } from 'node:path';
 
 export let gracefulShutdown: (() => void) | null = null;
 

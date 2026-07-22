@@ -4,7 +4,7 @@ import { calculateAddedDamage } from './added-damage.js';
 import { applyConversion } from './conversion.js';
 import { applyScaling } from './scaling.js';
 import { applyCritical } from './critical.js';
-import { applyPenetration } from './penetration.js';
+import { applyPenetration, type PenetrationResult } from './penetration.js';
 import { applyMitigation } from './mitigation.js';
 import type { DamageReport } from './damage.types.js';
 
@@ -40,9 +40,9 @@ export function calculateDamage(snapshot: CharacterSnapshot, skillIndex = 0): Da
 
   const totalDps = isDot
     ? calculateDotDps(skill, snapshot)
-    : penResult.total * castRate;
+    : penResult.breakdown.total * castRate;
 
-  const averageHit = isDot ? 0 : penResult.total;
+  const averageHit = isDot ? 0 : penResult.breakdown.total;
 
   const bossCtx = {
     ...snapshot.context,
@@ -58,7 +58,7 @@ export function calculateDamage(snapshot: CharacterSnapshot, skillIndex = 0): Da
     },
   };
 
-  const bossResult = applyMitigation(penResult, bossCtx);
+  const bossResult = applyMitigation(penResult.breakdown, bossCtx, penResult.penetrationByType);
   const bossDps = isDot ? totalDps * 0.7 : bossResult.total * castRate;
 
   const uberCtx = {
@@ -67,18 +67,18 @@ export function calculateDamage(snapshot: CharacterSnapshot, skillIndex = 0): Da
       fireResistance: 50, coldResistance: 50, lightningResistance: 50, chaosResistance: 30 },
   };
 
-  const uberResult = applyMitigation(penResult, uberCtx);
+  const uberResult = applyMitigation(penResult.breakdown, uberCtx, penResult.penetrationByType);
   const uberDps = isDot ? totalDps * 0.5 : uberResult.total * castRate;
 
   return {
     totalDps: Math.round(totalDps * 10) / 10,
     averageHit: Math.round(averageHit * 10) / 10,
     castRate: Math.round(castRate * 100) / 100,
-    damageTypes: penResult.byType,
+    damageTypes: penResult.breakdown.byType,
     bossDps: Math.round(bossDps * 10) / 10,
     uberDps: Math.round(uberDps * 10) / 10,
     isDotBuild: isDot,
-    breakdown: penResult,
+    breakdown: penResult.breakdown,
   };
 }
 

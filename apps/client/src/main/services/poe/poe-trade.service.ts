@@ -12,6 +12,22 @@ function rateLimited<T>(fn: () => Promise<T>): Promise<T> {
   return result;
 }
 
+function logTradeApi(method: string, url: string, body?: string): void {
+  console.log(`[TradeAPI] ${method} ${url}${body ? ` body=${body}` : ''}`);
+}
+
+async function tradeFetch(url: string, opts?: Record<string, unknown>): Promise<Response> {
+  logTradeApi(opts?.method === 'POST' ? 'POST' : 'GET', url, opts?.body as string | undefined);
+  const res = await net.fetch(url, { headers: { 'User-Agent': 'HelperDesktop/1.0' }, ...opts } as RequestInit);
+  const clone = res.clone();
+  const text = await clone.text().catch(() => '(no body)');
+  console.log(`[TradeAPI] → ${res.status} ${res.statusText} | body: ${text.slice(0, 500)}`);
+  if (!res.ok) {
+    console.log(`[TradeAPI] ✗ FAILED: ${text.slice(0, 1000)}`);
+  }
+  return res;
+}
+
 const pendingRequests = new Map<string, Promise<unknown>>();
 
 function coalesce<T>(key: string, fn: () => Promise<T>): Promise<T> {
@@ -69,8 +85,7 @@ export function createPoeTradeService(): PoeTradeService {
         const cached2 = getCachedLeagues();
         if (cached2) return cached2;
         const url = `${POE_API_BASE}/api/trade/data/leagues`;
-        const res = await rateLimited(() => net.fetch(url, { headers: { 'User-Agent': 'HelperDesktop/1.0' } }));
-        if (!res.ok) throw new Error(`GGG API ${res.status}`);
+        const res = await rateLimited(() => tradeFetch(url));
         const data = (await res.json()) as { result: Array<{ id: string; text: string }> };
         const leagues = data.result ?? [];
         setCachedLeagues(leagues);
@@ -88,30 +103,16 @@ export function createPoeTradeService(): PoeTradeService {
 
         const body = JSON.stringify({ exchange: { status: { option: 'online' }, have: [have], want: [want] } });
         const res = await rateLimited(() =>
-          net.fetch(`${POE_API_BASE}/api/trade/exchange/${encodeURIComponent(league)}`, {
+          tradeFetch(`${POE_API_BASE}/api/trade/exchange/${encodeURIComponent(league)}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'User-Agent': 'HelperDesktop/1.0' },
             body,
           }),
         );
-        if (!res.ok) throw new Error(`GGG API ${res.status}`);
         const data = (await res.json()) as { id: string; result: Record<string, unknown>; total: number };
-        const listingIds = Object.keys(data.result).slice(0, MAX_LISTINGS);
-        if (listingIds.length === 0) {
-          const empty = { listings: [], total: data.total };
-          setCachedExchange(league, have, want, empty);
-          return empty;
-        }
-
-        const hash = listingIds.join(',');
-        const detailRes = await rateLimited(() =>
-          net.fetch(`${POE_API_BASE}/api/trade/fetch/${hash}?query=${data.id}`, {
-            headers: { 'User-Agent': 'HelperDesktop/1.0' },
-          }),
-        );
-        if (!detailRes.ok) throw new Error(`GGG API ${detailRes.status}`);
-        const detailData = (await detailRes.json()) as { result: Record<string, unknown>[] };
-        const result = { listings: detailData.result ?? [], total: data.total };
+        // Exchange endpoint returns full listing data in result object values (no second fetch needed)
+        const listings = Object.values(data.result).slice(0, MAX_LISTINGS);
+        const result = { listings, total: data.total };
         setCachedExchange(league, have, want, result);
         return result;
       });
@@ -121,24 +122,20 @@ export function createPoeTradeService(): PoeTradeService {
       const queryKey = JSON.stringify({ league, query });
       return coalesce(`search:${queryKey}`, async () => {
         const res = await rateLimited(() =>
-          net.fetch(`${POE_API_BASE}/api/trade/search/${encodeURIComponent(league)}`, {
+          tradeFetch(`${POE_API_BASE}/api/trade/search/${encodeURIComponent(league)}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'User-Agent': 'HelperDesktop/1.0' },
             body: JSON.stringify(query),
           }),
         );
-        if (!res.ok) throw new Error(`GGG API ${res.status}`);
         const data = (await res.json()) as { id: string; result: string[]; total: number };
         const ids = data.result.slice(0, MAX_LISTINGS);
         if (ids.length === 0) return { id: data.id, items: [], total: data.total };
 
         const hash = ids.join(',');
         const detailRes = await rateLimited(() =>
-          net.fetch(`${POE_API_BASE}/api/trade/fetch/${hash}?query=${data.id}`, {
-            headers: { 'User-Agent': 'HelperDesktop/1.0' },
-          }),
+          tradeFetch(`${POE_API_BASE}/api/trade/fetch/${hash}?query=${data.id}`),
         );
-        if (!detailRes.ok) throw new Error(`GGG API ${detailRes.status}`);
         const detailData = (await detailRes.json()) as { result: unknown[] };
         return { id: data.id, items: detailData.result, total: data.total };
       });
@@ -147,11 +144,8 @@ export function createPoeTradeService(): PoeTradeService {
     async fetchExchangeHistory(): Promise<unknown> {
       return coalesce('exchange-history', async () => {
         const res = await rateLimited(() =>
-          net.fetch('https://web.poecdn.com/api/currency-exchange', {
-            headers: { 'User-Agent': 'HelperDesktop/1.0' },
-          }),
+          tradeFetch('https://web.poecdn.com/api/currency-exchange'),
         );
-        if (!res.ok) throw new Error(`GGG API ${res.status}`);
         return res.json();
       });
     },

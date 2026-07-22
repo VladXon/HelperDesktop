@@ -52,14 +52,34 @@ export async function fetchExchangeHistory(): Promise<unknown> {
 function parseExchangeListing(raw: unknown): { price: number; currency: string; amount: number; accountName: string } {
   const item = raw as Record<string, unknown>;
   const listing = (item.listing ?? {}) as Record<string, unknown>;
-  const price = (listing.price ?? {}) as Record<string, unknown>;
-  const exchange = (price.exchange ?? {}) as Record<string, unknown>;
-  const priceItem = (price.item ?? {}) as Record<string, unknown>;
   const account = (listing.account ?? {}) as Record<string, unknown>;
-  return {
-    price: (exchange.amount ?? price.amount ?? 0) as number,
-    currency: (priceItem.currency ?? 'chaos') as string,
-    amount: (exchange.amount ?? 0) as number,
-    accountName: (account.name ?? '?') as string,
-  };
+
+  // Search format: listing.price.exchange.amount
+  const price = (listing.price ?? {}) as Record<string, unknown>;
+  const searchExchange = (price.exchange ?? {}) as Record<string, unknown>;
+  const searchItem = (price.item ?? {}) as Record<string, unknown>;
+  if (searchExchange.amount) {
+    return {
+      price: Number(searchExchange.amount ?? 0),
+      currency: String(searchItem.currency ?? 'chaos'),
+      amount: Number(searchExchange.amount ?? 0),
+      accountName: String(account.name ?? '?'),
+    };
+  }
+
+  // Exchange format: listing.offers[0].exchange.amount
+  const offers = (listing.offers ?? []) as Array<Record<string, unknown>>;
+  if (offers.length > 0) {
+    const offer = offers[0]!;
+    const offerExchange = (offer.exchange ?? {}) as Record<string, unknown>;
+    const offerItem = (offer.item ?? {}) as Record<string, unknown>;
+    return {
+      price: Number(offerExchange.amount ?? 0),
+      currency: String(offerItem.currency ?? 'chaos'),
+      amount: Number(offerItem.amount ?? 1),
+      accountName: String(account.name ?? '?'),
+    };
+  }
+
+  return { price: 0, currency: 'chaos', amount: 0, accountName: String(account.name ?? '?') };
 }

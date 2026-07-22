@@ -26,9 +26,11 @@ export function calculateDefense(snapshot: CharacterSnapshot, incomingHitSize = 
   const recovery = calculateRecovery(stats);
   const suppression = calculateSpellSuppression(stats);
 
-  const life = stats.mechanics.overrides['life'] !== undefined
+  const baseLife = stats.mechanics.overrides['life'] !== undefined
     ? stats.mechanics.overrides['life']!
     : stats.defense.life;
+  // Apply increased life multiplier
+  const life = Math.round(baseLife * (1 + (stats.defense.lifeIncreased ?? 0) / 100));
   const es = stats.defense.energyShield;
   const combinedPool = life + es;
 

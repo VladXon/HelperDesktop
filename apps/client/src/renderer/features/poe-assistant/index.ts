@@ -1,4 +1,4 @@
-import type { CommandDef } from '../layout';
+import type { CommandDef } from '../layout/components/CommandPalette.types';
 
 export { PoeAssistantPage } from './components/PoeAssistantPage';
 export { usePoeSession, useLeagues, useExchangeRate, useItemSearch, useCharacters } from './hooks/usePoeQueries';

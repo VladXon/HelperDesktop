@@ -15,6 +15,7 @@ import { SettingsPage } from './features/settings';
 import { PoeAssistantPage } from './features/poe-assistant';
 import { PoeAnalyzerPage } from './features/poe';
 import { AiInspectorOverlay, AiInspectorProvider } from './features/ai-inspector';
+import { PoeSessionModal } from './components/PoeSessionModal';
 import { onNoteLink } from './lib/deep-link';
 
 function MainApp(): React.JSX.Element {
@@ -117,6 +118,7 @@ function MainApp(): React.JSX.Element {
         </div>
       </div>
       <CommandPalette />
+      <PoeSessionModal />
       {import.meta.env.DEV ? <ErrorBoundary><AiInspectorOverlay /></ErrorBoundary> : null}
       <div className="sr-only">{user?.login}</div>
     </div>

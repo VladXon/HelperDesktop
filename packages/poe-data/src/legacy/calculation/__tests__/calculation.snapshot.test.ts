@@ -155,7 +155,7 @@ describe('conversion', () => {
 });
 
 describe('penetration', () => {
-  it('penetration increases effective damage against 0-res enemy', () => {
+  it('penetration does not modify damage directly (handled in mitigation)', () => {
     const stats = emptyStats({
       offense: {
         ...emptyStats().offense,
@@ -168,10 +168,14 @@ describe('penetration', () => {
 
     const penResult = applyPenetration(base, stats);
     const fireDmg = base.components[0]!.value;
-    expect(penResult.components[0]!.value).toBeCloseTo(fireDmg * 1.2, 0);
+
+    // Penetration no longer modifies damage directly
+    expect(penResult.breakdown.components[0]!.value).toBeCloseTo(fireDmg, 0);
+    // But it records the penetration for mitigation
+    expect(penResult.penetrationByType.fire).toBe(20);
   });
 
-  it('penetration against boss with 30% base resist (pre-mitigation)', () => {
+  it('penetration against boss with 30% base resist reduces effective resist to 0', () => {
     const stats = emptyStats({
       offense: {
         ...emptyStats().offense,
@@ -184,12 +188,15 @@ describe('penetration', () => {
     const penResult = applyPenetration(base, stats);
 
     const enemy = bossEnemy();
-    const mitigated = applyMitigation(penResult, {
+    const mitigated = applyMitigation(penResult.breakdown, {
       ...defaultCalculationContext(),
       enemy,
-    });
+    }, penResult.penetrationByType);
     const fireDmg = base.components[0]!.value;
-    expect(penResult.components[0]!.value).toBeCloseTo(fireDmg * 1.3, 0);
+
+    // Penetration doesn't change damage before mitigation
+    expect(penResult.breakdown.components[0]!.value).toBeCloseTo(fireDmg, 0);
+    // But mitigation with 30% pen vs 30% boss res = 0% effective res, so full damage
     expect(mitigated.components[0]!.value).toBeCloseTo(fireDmg, 0);
   });
 });

@@ -36,11 +36,11 @@ export function useItemSearch(league: string | null, query: Record<string, unkno
   });
 }
 
-export function useCharacters() {
+export function useCharacters(enabled = false) {
   return useQuery({
     queryKey: ['poe', 'characters'],
     queryFn: api.fetchCharacters,
-    enabled: false,
+    enabled,
     staleTime: 5 * 60_000,
     retry: false,
   });
