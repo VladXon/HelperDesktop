@@ -284,7 +284,13 @@ export function registerPoeIpc(): void {
   );
 
   ipcMain.handle('poe:get-oauth-status', async () => backend.getOAuthStatus());
-  ipcMain.handle('poe:fetch-oauth-characters', async () => backend.fetchOAuthCharacters());
+  ipcMain.handle('poe:fetch-oauth-characters', async () => {
+    const poesessid = getPoesessidAuth()?.getPoesessid();
+    const accountName = poesessid ? await getPoesessidAuth()!.getAccountName() : null;
+    if (!poesessid || !accountName) return { characters: [] };
+    const chars = await gggProvider.getCharacters(poesessid, accountName);
+    return { characters: chars };
+  });
   ipcMain.handle('poe:fetch-character-detail', async (_e, name: string) =>
     backend.getCharacterDetail(name),
   );
@@ -317,10 +323,12 @@ export function registerPoeIpc(): void {
     const accountName = poesessid ? await getPoesessidAuth()!.getAccountName() : null;
 
     const [detail, passiveTreeSnapshot] = await Promise.all([
-      backend.getCharacterDetail(characterName).catch((err: Error) => {
-        console.warn('[poe:analyze] character detail fetch failed:', err.message);
-        return null;
-      }),
+      poesessid && accountName
+        ? gggProvider.getCharacterDetail(poesessid, characterName, accountName).catch((err: Error) => {
+            console.warn('[poe:analyze] character detail fetch failed:', err.message);
+            return null;
+          })
+        : Promise.resolve(null),
       poesessid && accountName
         ? fetchPassiveSkills(accountName, characterName, poesessid).catch((err: Error) => {
             console.warn('[poe:analyze] passive tree fetch failed:', err.message);
