@@ -112,7 +112,7 @@ async function fetchViaWindow<T>(path: string, poesessid: string): Promise<T> {
       sameSite: 'lax',
     });
 
-    await win.loadURL(`${GGG_BASE}/login`);
+    await win.loadURL(`${GGG_BASE}/api/leagues?type=main`);
 
     await new Promise<void>((resolve, reject) => {
       let finished = false;
