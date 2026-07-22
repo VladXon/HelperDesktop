@@ -4,7 +4,7 @@ import type { GggCharacter, GggCharacterDetail, PoeDataProvider } from './ggg-da
 
 export type { GggCharacter, GggCharacterDetail, PoeDataProvider };
 
-const API_BASE = 'https://www.pathofexile.com';
+const API_BASE = 'https://api.pathofexile.com';
 
 function maskSessionId(poesessid: string): string {
   if (poesessid.length <= 8) return '***';
@@ -57,7 +57,7 @@ export function createGggClient(): PoeDataProvider {
   return {
     async getAccountName(poesessid: string): Promise<string> {
       log.info('ggg_get_account_name', { session: maskSessionId(poesessid) });
-      const data = await gggFetch<{ name?: string }>('/character-window/get-account-name', poesessid);
+      const data = await gggFetch<{ name?: string }>('/profile', poesessid);
       if (!data?.name) throw new HttpError(400, 'session_invalid', 'Could not validate POESESSID — no account name returned');
       return data.name;
     },

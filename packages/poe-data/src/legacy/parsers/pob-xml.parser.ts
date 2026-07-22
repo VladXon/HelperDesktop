@@ -31,6 +31,7 @@ export function parsePobXml(xml: string): PoBXmlDTO {
     build: parseBuildSection(xml),
     skills: parseSkillsSection(xml),
     items: parseItemsSection(xml),
+    itemSets: [],
     tree: parseTreeSection(xml),
     config: parseConfigSection(xml),
   };

@@ -1,4 +1,4 @@
-import { ipcMain, shell } from 'electron';
+import { ipcMain, shell, session as electronSession } from 'electron';
 import { createPoeAccountService } from '../services/poe/poe-account.service.js';
 import { createPoeTradeService } from '../services/poe/poe-trade.service.js';
 import { createPoeImportService } from '../services/poe/poe-import.service.js';
@@ -30,12 +30,22 @@ function getNewAuth(): IGggAuthenticator {
   return _newAuth;
 }
 
-/** Устанавливает POESESSID во все authenticators в цепочке */
-function setNewAuthPoesessid(poesessid: string): void {
+/** Устанавливает POESESSID во все authenticators + в default Chromium session */
+async function setNewAuthPoesessid(poesessid: string): Promise<void> {
   const poeAuth = getPoesessidAuth();
   const bwAuth = getBrowserWindowAuth();
   if (poeAuth) poeAuth.setPoesessid(poesessid);
   if (bwAuth) bwAuth.setPoesessid(poesessid);
+  await electronSession.defaultSession.cookies.set({
+    url: 'https://www.pathofexile.com',
+    name: 'POESESSID',
+    value: poesessid,
+    domain: '.pathofexile.com',
+    path: '/',
+    secure: true,
+    sameSite: 'lax',
+    httpOnly: true,
+  });
 }
 
 export function registerPoeIpc(): void {
@@ -54,7 +64,7 @@ export function registerPoeIpc(): void {
 
     ipcMain.handle('poe:auth-validate', async (_e, poesessid?: string) => {
       const auth = getNewAuth();
-      if (poesessid) setNewAuthPoesessid(poesessid);
+      if (poesessid) await setNewAuthPoesessid(poesessid);
       const vr = await auth.validate();
       return {
         valid: vr.valid,
@@ -86,7 +96,7 @@ export function registerPoeIpc(): void {
     });
 
     ipcMain.handle('poe:auth-set-poesessid', async (_e, poesessid: string) => {
-      setNewAuthPoesessid(poesessid);
+      await setNewAuthPoesessid(poesessid);
       return { ok: true };
     });
   }
@@ -108,15 +118,16 @@ export function registerPoeIpc(): void {
   } else {
     // NEW AUTH: session handlers use unified authenticator
     ipcMain.handle('poe:set-session', async (_e, poesessid: string) => {
-      setNewAuthPoesessid(poesessid);
+      await setNewAuthPoesessid(poesessid);
       const vr = await getNewAuth().validate();
       return { valid: vr.valid, accountName: vr.accountName ?? null };
     });
 
     ipcMain.handle('poe:get-session', async () => {
       const vr = await getNewAuth().validate();
+      const hasPoesessid = !!getPoesessidAuth()?.getPoesessid();
       return {
-        configured: true,
+        configured: vr.valid || hasPoesessid,
         valid: vr.valid,
         accountName: vr.accountName ?? null,
       };
@@ -253,7 +264,16 @@ export function registerPoeIpc(): void {
   ipcMain.handle('poe:disconnect-account', async (_e, id: number) => backend.disconnectAccount(id));
 
   ipcMain.handle('poe:get-auth-url', async () => {
-    const { authUrl, state } = await backend.getAuthUrl();
+    const result = await backend.getAuthUrl() as unknown as Record<string, unknown>;
+    if (!result || result.mode === 'session') {
+      throw Object.assign(
+        new Error('Server is in session mode — use PoE session login'),
+        { code: 'session_mode' },
+      );
+    }
+    const authUrl = result.authUrl as string | undefined;
+    const state = result.state as string | undefined;
+    if (!authUrl || !state) throw new Error('Failed to get OAuth URL');
     shell.openExternal(authUrl);
     return { authUrl, state };
   });
@@ -278,7 +298,7 @@ export function registerPoeIpc(): void {
   } else {
     // NEW AUTH: validates via fallback chain (session → poesessid → browserwindow)
     ipcMain.handle('poe:connect-session', async (_e, poeSessionId: string) => {
-      setNewAuthPoesessid(poeSessionId);
+      await setNewAuthPoesessid(poeSessionId);
       const vr = await getNewAuth().validate();
       if (!vr.valid) {
         throw Object.assign(

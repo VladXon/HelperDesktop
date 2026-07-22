@@ -110,7 +110,11 @@ export function registerServerIpc(getWindow: () => BrowserWindow | null): void {
   });
 
   ipcMain.handle('server:dev-serverinfo', async () => {
-    return apiFetch('/api/dev/serverinfo');
+    try {
+      return await apiFetch('/api/dev/serverinfo');
+    } catch {
+      return { available: false, reason: 'Not available in production or unauthorized' };
+    }
   });
 
   ipcMain.handle('server:dev-restart', async () => {

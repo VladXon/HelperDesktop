@@ -1,8 +1,16 @@
 import { net } from 'electron';
 import type { IGggAuthenticator, GggAuthHeaders, AuthAttemptLog, ValidationResult, ErrorCategory, TransportSelection, PartitionInfo } from './authenticator';
 
-const GGG_API = 'https://www.pathofexile.com';
-const VALIDATION_ENDPOINT = '/character-window/get-account-name';
+const GGG_API = 'https://api.pathofexile.com';
+const VALIDATION_ENDPOINT = '/profile';
+
+/**
+ * Cloudflare can return non-200 status codes when blocking requests.
+ * These are NOT real GGG errors — they require CF bypass (BrowserWindow).
+ */
+function isLikelyCloudflareStatus(status: number): boolean {
+  return status === 403 || status === 404 || status === 503;
+}
 
 export class PoesessidAuthenticator implements IGggAuthenticator {
   readonly id = 'poesessid-header';
@@ -57,6 +65,7 @@ export class PoesessidAuthenticator implements IGggAuthenticator {
 
     try {
       const url = `${GGG_API}${VALIDATION_ENDPOINT}`;
+      console.log(`[PoeAuth] PoesessidAuthenticator: validating via net.fetch (raw HTTP without Chromium session)`);
       const res = await net.fetch(url, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36',
@@ -69,26 +78,38 @@ export class PoesessidAuthenticator implements IGggAuthenticator {
       const body = await res.text();
       cfDetected = body.includes('Cloudflare') || body.includes('Just a moment');
 
+      if (cfDetected) {
+        console.log(`[PoeAuth] PoesessidAuthenticator: Cloudflare detected (status=${statusCode}) — raw HTTP blocked, need BrowserWindow`);
+      }
+
       if (res.status === 200) {
         try {
           const data = JSON.parse(body);
           if (data?.name) {
             this.accountName = data.name;
             this.logAttempt(VALIDATION_ENDPOINT, true, 200, performance.now() - t0, false, null, null);
+            console.log(`[PoeAuth] PoesessidAuthenticator: ✓ validated (account=${data.name})`);
             return { valid: true, accountName: data.name, errorCategory: null, errorMessage: null, transportSelection };
           }
         } catch { /* not JSON */ }
       }
 
-      errorCategory = cfDetected ? 'cloudflare_block'
-        : res.status === 401 || res.status === 403 ? 'session_expired'
-        : res.status === 429 ? 'rate_limited'
-        : res.status === 404 ? 'invalid_params'
-        : 'ggg_unavailable';
+      let isGggJson = false;
+      if (body) {
+        try { const p = JSON.parse(body); if (p && (p.error || p.name)) isGggJson = true; } catch { /* not json */ }
+      }
 
+      errorCategory = cfDetected ? 'cloudflare_block'
+        : statusCode === 429 ? 'rate_limited'
+        : isGggJson ? 'session_expired'
+        : isLikelyCloudflareStatus(statusCode) ? 'cloudflare_block'
+        : 'session_expired';
+
+      console.log(`[PoeAuth] PoesessidAuthenticator: ✗ failed (status=${statusCode}, error=${errorCategory}, isGggJson=${isGggJson})`);
       this.logAttempt(VALIDATION_ENDPOINT, false, statusCode, performance.now() - t0, cfDetected, errorCategory, null);
       return { valid: false, errorCategory, errorMessage: `GGG returned ${statusCode}`, transportSelection };
     } catch (err) {
+      console.log(`[PoeAuth] PoesessidAuthenticator: ✗ network error: ${(err as Error).message}`);
       this.logAttempt(VALIDATION_ENDPOINT, false, null, performance.now() - t0, false, 'network_error', null);
       return { valid: false, errorCategory: 'network_error', errorMessage: (err as Error).message, transportSelection };
     }

@@ -3,7 +3,7 @@ import { readJson, writeJson, encryptionAvailable } from '../../utils/safe-stora
 import { net } from 'electron';
 
 const POE_SESSION_FILE = 'poe-session.json';
-const POE_API_BASE = 'https://www.pathofexile.com';
+const POE_API_BASE = 'https://api.pathofexile.com';
 
 export interface PoeSessionData {
   poesessid: string;
@@ -65,7 +65,7 @@ export function createPoeAccountService(): PoeAccountService {
 
   async function validateSession(poesessid: string): Promise<{ valid: boolean; accountName?: string }> {
     try {
-      const data = await gggFetch<{ name?: string }>('/character-window/get-account-name', poesessid);
+      const data = await gggFetch<{ name?: string }>('/profile', poesessid);
       if (data?.name) return { valid: true, accountName: data.name };
       return { valid: false };
     } catch {

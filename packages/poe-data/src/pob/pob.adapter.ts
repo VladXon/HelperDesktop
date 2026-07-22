@@ -1,5 +1,5 @@
 import type { HttpClient } from '../http/http-client.js';
-import { parsePobXml, parsePobPastebin, isPobPastebinUrl, isPobbUrl, extractPobbId, isPoBUrl } from './pob-xml.parser.js';
+import { parsePobXml, parsePobPastebin, parsePobbIn, isPobPastebinUrl, isPobbUrl, extractPobbId, isPoBUrl } from './pob-xml.parser.js';
 import type { PoBXmlDTO } from './pob-xml.dto.js';
 import type { AdapterResult } from '@helper/shared';
 
@@ -47,20 +47,20 @@ async function importFromPobb(url: string, httpClient: HttpClient, timeout: numb
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
 
-  let xmlContent: string;
+  let compressedData: string;
   try {
-    xmlContent = await httpClient.get<string>(rawUrl, {
+    compressedData = await httpClient.get<string>(rawUrl, {
       signal: controller.signal,
     });
   } finally {
     clearTimeout(timer);
   }
 
-  if (!xmlContent || xmlContent.trim().length === 0) {
+  if (!compressedData || compressedData.trim().length === 0) {
     return { ok: false, error: 'Empty response from pobb.in' };
   }
 
-  const dto = parsePobXml(xmlContent.trim());
+  const dto = parsePobbIn(compressedData.trim());
   return {
     ok: true,
     data: dto,

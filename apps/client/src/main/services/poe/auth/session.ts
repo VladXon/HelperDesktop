@@ -1,8 +1,19 @@
 import { net, session as electronSession } from 'electron';
 import type { IGggAuthenticator, GggAuthHeaders, AuthAttemptLog, ValidationResult, ErrorCategory, TransportSelection, PartitionInfo } from './authenticator';
 
-const GGG_API = 'https://www.pathofexile.com';
-const VALIDATION_ENDPOINT = '/character-window/get-account-name';
+const GGG_API = 'https://api.pathofexile.com';
+const VALIDATION_ENDPOINT = '/profile';
+
+/**
+ * Cloudflare can return non-200 status codes when blocking requests:
+ * - 403: Forbidden (CF WAF rule)
+ * - 404: Not Found (CF challenge page returned as 404)
+ * - 503: Service Unavailable (CF rate limit / origin down)
+ * These are NOT real GGG errors — they require CF bypass (BrowserWindow).
+ */
+function isLikelyCloudflareStatus(status: number): boolean {
+  return status === 403 || status === 404 || status === 503;
+}
 
 /**
  * Primary authenticator — Chromium session с поддержкой multi-account изоляции.
@@ -78,15 +89,21 @@ export class DefaultSessionAuthenticator implements IGggAuthenticator {
     let errorCategory: ErrorCategory = null;
 
     try {
+      console.log(`[PoeAuth] DefaultSessionAuthenticator: validating via Chromium session cookies`);
       const result = await this.makeRequest(VALIDATION_ENDPOINT);
       statusCode = result.status;
       cfDetected = result.cfDetected;
+
+      if (cfDetected) {
+        console.log(`[PoeAuth] DefaultSessionAuthenticator: Cloudflare detected (status=${statusCode}) — session may lack cf_clearance`);
+      }
 
       if (result.status === 200 && result.body) {
         try {
           const data = JSON.parse(result.body);
           if (data?.name) {
             this.cachedAccountName = data.name;
+            console.log(`[PoeAuth] DefaultSessionAuthenticator: ✓ validated (account=${data.name})`);
             this.logAttempt(VALIDATION_ENDPOINT, true, 200, performance.now() - t0, false, null, null);
             return {
               valid: true,
@@ -99,15 +116,22 @@ export class DefaultSessionAuthenticator implements IGggAuthenticator {
         } catch { /* not JSON */ }
       }
 
-      errorCategory = cfDetected ? 'cloudflare_block'
-        : result.status === 401 || result.status === 403 ? 'session_expired'
-        : result.status === 429 ? 'rate_limited'
-        : result.status === 404 ? 'invalid_params'
-        : 'ggg_unavailable';
+      let isGggJson = false;
+      if (result.body) {
+        try { const p = JSON.parse(result.body); if (p && (p.error || p.name)) isGggJson = true; } catch { /* not json */ }
+      }
 
+      errorCategory = cfDetected ? 'cloudflare_block'
+        : result.status === 429 ? 'rate_limited'
+        : isGggJson ? 'session_expired'
+        : isLikelyCloudflareStatus(result.status) ? 'cloudflare_block'
+        : 'session_expired';
+
+      console.log(`[PoeAuth] DefaultSessionAuthenticator: ✗ failed (status=${statusCode}, error=${errorCategory}, isGggJson=${isGggJson})`);
       this.logAttempt(VALIDATION_ENDPOINT, false, result.status, performance.now() - t0, cfDetected, errorCategory, null);
       return { valid: false, errorCategory, errorMessage: `GGG returned ${result.status}`, transportSelection };
     } catch (err) {
+      console.log(`[PoeAuth] DefaultSessionAuthenticator: ✗ network error: ${(err as Error).message}`);
       this.logAttempt(VALIDATION_ENDPOINT, false, null, performance.now() - t0, false, 'network_error', null);
       return { valid: false, errorCategory: 'network_error', errorMessage: (err as Error).message, transportSelection };
     }

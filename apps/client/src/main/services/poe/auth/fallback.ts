@@ -36,28 +36,33 @@ export class FallbackChainAuthenticator implements IGggAuthenticator {
 
     for (let i = 0; i < this.chain.length; i++) {
       const auth = this.chain[i]!;
-      console.log(`[auth:fallback] trying ${auth.id}...`);
+      console.log(`[PoeAuth] FallbackChain: trying ${auth.id}...`);
 
       const vr = await auth.validate();
 
       if (vr.valid) {
-        console.log(`[auth:fallback] ✓ ${auth.id} selected: ${vr.transportSelection.selectedTransport}`);
-        console.log(`[auth:fallback]   reason: ${vr.transportSelection.fallbackAttempted ? `fallback from previous (${vr.transportSelection.fallbackReason})` : 'primary'}`);
+        console.log(`[PoeAuth] FallbackChain: ✓ ${auth.id} selected: ${vr.transportSelection.selectedTransport}`);
+        console.log(`[PoeAuth] FallbackChain:   reason: ${vr.transportSelection.fallbackAttempted ? `fallback from previous (${vr.transportSelection.fallbackReason})` : 'primary'}`);
         this.lastSuccessfulId = auth.id;
         return auth.authenticate();
       }
 
       const fbMsg = vr.transportSelection.fallbackReason ?? vr.errorCategory ?? 'unknown';
-      console.log(`[auth:fallback] ✗ ${auth.id} failed: ${fbMsg} (transport: ${vr.transportSelection.selectedTransport})`);
+      console.log(`[PoeAuth] FallbackChain: ✗ ${auth.id} failed: ${fbMsg} (transport: ${vr.transportSelection.selectedTransport})`);
+
+      if (vr.errorCategory === null) {
+        console.log(`[PoeAuth] FallbackChain: ⏭ ${auth.id} skipped: not configured`);
+        continue;
+      }
 
       if (!FALLBACK_CATEGORIES.includes(vr.errorCategory)) {
-        console.log(`[auth:fallback] ✗ ${vr.errorCategory} is not fallbackable — stopping chain`);
+        console.log(`[PoeAuth] FallbackChain: ✗ ${vr.errorCategory} is not fallbackable — stopping chain`);
         throw Object.assign(new Error(vr.errorMessage ?? 'Authentication failed'), {
           code: vr.errorCategory ?? 'auth_failed',
         });
       }
 
-      console.log(`[auth:fallback] → falling back to next authenticator (${i + 1 < this.chain.length ? this.chain[i + 1]!.id : 'NONE'})`);
+      console.log(`[PoeAuth] FallbackChain: → falling back to next authenticator (${i + 1 < this.chain.length ? this.chain[i + 1]!.id : 'NONE'})`);
     }
 
     throw Object.assign(new Error('All authentication methods failed'), { code: 'auth_all_failed' });

@@ -18,7 +18,11 @@ export {
   extractPobbId,
   parsePobXml,
   parsePobPastebin,
+  parsePobbIn,
 } from './pob-xml.parser.js';
+
+export { decodePobCompressedData } from './utils/decompress.js';
+export type { DecompressFormat, DecompressOptions } from './utils/decompress.js';
 
 export { importFromPobUrl, importFromPobXml } from './pob.adapter.js';
 export type { PoBImportOptions } from './pob.adapter.js';

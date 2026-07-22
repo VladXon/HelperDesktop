@@ -1,6 +1,6 @@
 import { BrowserWindow, net } from 'electron';
 
-const GGG_BASE = 'https://www.pathofexile.com';
+const GGG_BASE = 'https://api.pathofexile.com';
 
 export interface GggCharacter {
   name: string;
@@ -110,6 +110,7 @@ async function fetchViaWindow<T>(path: string, poesessid: string): Promise<T> {
       path: '/',
       secure: true,
       sameSite: 'lax',
+      httpOnly: true,
     });
 
     await win.loadURL(`${GGG_BASE}/api/leagues?type=main`);
@@ -173,7 +174,7 @@ export function createElectronGggProvider() {
   return {
     async getAccountName(poesessid: string): Promise<string> {
       console.log('[ggg:electron] getAccountName', maskSessionId(poesessid));
-      const data = await fetchViaWindow<{ name?: string }>('/character-window/get-account-name', poesessid);
+      const data = await fetchViaWindow<{ name?: string }>('/profile', poesessid);
       if (!data?.name) throw Object.assign(new Error('Could not validate POESESSID — no account name returned'), { code: 'session_invalid' });
       return data.name;
     },

@@ -42,7 +42,7 @@ const accountA = args['accountA'] ?? '';
 const accountB = args['accountB'] ?? '';
 
 const ENDPOINT_COVERAGE = [
-  '/character-window/get-account-name',
+  '/profile',
   '/character-window/get-characters',
   '/character-window/get-items',
   '/api/trade/search',

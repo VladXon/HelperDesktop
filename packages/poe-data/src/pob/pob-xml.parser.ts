@@ -1,5 +1,6 @@
 import { inflateRawSync } from 'node:zlib';
-import type { PoBXmlDTO, PoBBuildAttributes, PoBSkillSet, PoBSkill, PoBItem, PoBMod, PoBSocket, PoBTree, PoBConfig } from './pob-xml.dto.js';
+import { decodePobCompressedData } from './utils/decompress.js';
+import type { PoBXmlDTO, PoBBuildAttributes, PoBSkillSet, PoBSkill, PoBItem, PoBMod, PoBItemSet, PoBSocket, PoBTree, PoBConfig } from './pob-xml.dto.js';
 
 const PASTEBIN_URL_RE = /^https:\/\/pastebin\.com\/(?:raw\/)?([a-zA-Z0-9_-]+)$/;
 const POBB_URL_RE = /^https:\/\/(?:www\.)?pobb\.in\/([a-zA-Z0-9_-]+)$/;
@@ -36,10 +37,20 @@ export function extractPobbId(url: string): string | null {
 }
 
 export function parsePobXml(xml: string): PoBXmlDTO {
+  const build = parseBuildSection(xml);
+  const allItems = parseAllItems(xml);
+  const itemSets = parseItemSets(xml);
+
+  const activeItemIds = resolveActiveItemIds(itemSets, build.level);
+  const items = activeItemIds.size > 0
+    ? allItems.filter(item => activeItemIds.has(item.id))
+    : allItems;
+
   return {
-    build: parseBuildSection(xml),
+    build,
     skills: parseSkillsSection(xml),
-    items: parseItemsSection(xml),
+    items,
+    itemSets,
     tree: parseTreeSection(xml),
     config: parseConfigSection(xml),
   };
@@ -48,6 +59,15 @@ export function parsePobXml(xml: string): PoBXmlDTO {
 export function parsePobPastebin(base64Content: string): PoBXmlDTO {
   const compressed = decodeBase64(base64Content);
   const rawXml = inflateRaw(compressed).toString('utf-8');
+  return parsePobXml(rawXml);
+}
+
+/**
+ * Parse pobb.in build data (base64url + zlib compressed).
+ * pobb.in uses base64url (RFC 4648 §5) with zlib compression.
+ */
+export function parsePobbIn(compressedData: string): PoBXmlDTO {
+  const rawXml = decodePobCompressedData(compressedData, { format: 'zlib' });
   return parsePobXml(rawXml);
 }
 
@@ -139,7 +159,7 @@ function parseSkillsSection(xml: string): PoBSkillSet[] {
   return skillSets;
 }
 
-function parseItemsSection(xml: string): PoBItem[] {
+function parseAllItems(xml: string): PoBItem[] {
   const itemsBlock = extractTag(xml, 'Items');
   if (!itemsBlock) return [];
 
@@ -151,45 +171,222 @@ function parseItemsSection(xml: string): PoBItem[] {
     const inner = itemMatch[2] ?? '';
     const id = itemAttrs.id ?? '';
 
-    const baseTypeMatch = /<baseType>([^<]+)<\/baseType>/i.exec(inner);
-    const rarityMatch = /<rarity>([^<]+)<\/rarity>/i.exec(inner);
+    if (!id) continue;
 
-    const mods: PoBMod[] = [];
-    const modRegex = /<Mod\b([^/>]*?)\s*\/?>/g;
-    let modMatch: RegExpExecArray | null;
-    while ((modMatch = modRegex.exec(inner)) !== null) {
-      const mAttrs = parseAttrs(modMatch[1] ?? '');
-      mods.push({
-        text: mAttrs.text ?? '',
-        implicit: mAttrs.implicit === 'true',
-        explicit: mAttrs.explicit === 'true',
-        crafted: mAttrs.crafted === 'true',
-      });
-    }
+    const hasModTags = /<Mod\b/.test(inner);
 
-    const sockets: PoBSocket[] = [];
-    const socketRegex = /<Socket\b([^/>]*?)\s*\/?>/g;
-    let socketMatch: RegExpExecArray | null;
-    while ((socketMatch = socketRegex.exec(inner)) !== null) {
-      const sAttrs = parseAttrs(socketMatch[1] ?? '');
-      sockets.push({
-        group: parseInt(sAttrs.group ?? '1', 10),
-        attr: sAttrs.attr ?? '',
-      });
-    }
-
-    if (id) {
-      items.push({
-        id,
-        title: itemAttrs.title ?? '',
-        baseType: baseTypeMatch?.[1] ?? '',
-        rarity: rarityMatch?.[1] ?? 'normal',
-        rawMods: mods,
-        sockets,
-      });
+    if (hasModTags) {
+      items.push(parseItemLegacyFormat(id, itemAttrs, inner));
+    } else {
+      items.push(parseItemTextFormat(id, itemAttrs, inner));
     }
   }
   return items;
+}
+
+function parseItemSets(xml: string): PoBItemSet[] {
+  const itemsBlock = extractTag(xml, 'Items');
+  if (!itemsBlock) return [];
+
+  const sets: PoBItemSet[] = [];
+  const setRegex = /<ItemSet\b([^>]*)>([\s\S]*?)<\/ItemSet>/gi;
+  let setMatch: RegExpExecArray | null;
+  while ((setMatch = setRegex.exec(itemsBlock)) !== null) {
+    const attrs = parseAttrs(setMatch[1] ?? '');
+    const inner = setMatch[2] ?? '';
+    const id = parseInt(attrs.id ?? '0', 10);
+    if (!id) continue;
+
+    const slotItemIds: Record<string, string> = {};
+    const slotRegex = /<Slot\b([^>]*?)\/?>/gi;
+    let slotMatch: RegExpExecArray | null;
+    while ((slotMatch = slotRegex.exec(inner)) !== null) {
+      const sAttrs = parseAttrs(slotMatch[1] ?? '');
+      const itemId = sAttrs.itemId ?? '0';
+      const name = sAttrs.name ?? '';
+      if (itemId !== '0' && name) {
+        slotItemIds[name] = itemId;
+      }
+    }
+
+    sets.push({ id, title: attrs.title ?? '', slotItemIds });
+  }
+  return sets;
+}
+
+function resolveActiveItemIds(itemSets: PoBItemSet[], level: number): Set<string> {
+  if (itemSets.length === 0) return new Set();
+
+  let bestSet = itemSets[0]!;
+  let bestScore = -Infinity;
+
+  for (const set of itemSets) {
+    const slotCount = Object.keys(set.slotItemIds).length;
+    if (slotCount === 0) continue;
+
+    const lvlMatch = /lvl\s*(\d+)/i.exec(set.title);
+    if (!lvlMatch) {
+      if (slotCount > bestScore) {
+        bestScore = slotCount;
+        bestSet = set;
+      }
+      continue;
+    }
+
+    const setLevel = parseInt(lvlMatch[1]!, 10);
+    if (level >= setLevel) {
+      const score = setLevel * 1000 + slotCount;
+      if (score > bestScore) {
+        bestScore = score;
+        bestSet = set;
+      }
+    }
+  }
+
+  if (bestScore === -Infinity) {
+    let maxSlots = 0;
+    for (const set of itemSets) {
+      const sc = Object.keys(set.slotItemIds).length;
+      if (sc > maxSlots) { maxSlots = sc; bestSet = set; }
+    }
+  }
+
+  return new Set(Object.values(bestSet.slotItemIds));
+}
+
+const ITEM_META_KEYS = /^(rarity|quality|armou?r|energy shield|evasion|sockets|levelreq|implicits|prefix|suffix|item level|shaper item|elder item|searing exarch item|eater of worlds item|crafted|corrupted|mirrored|fractured|synthesised|enchant|note|variant|armourbasepercentile|energyshieldbasepercentile|evasionbasepercentile)/i;
+
+function parseItemTextFormat(id: string, itemAttrs: Record<string, string>, inner: string): PoBItem {
+  const lines = inner.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+
+  let textEnd = lines.length;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i]!.startsWith('<')) { textEnd = i; break; }
+  }
+  const textLines = lines.slice(0, textEnd);
+
+  let rarity = 'normal';
+  let title = '';
+  let baseType = '';
+  let implicitsCount = 0;
+  let implicitsStart = -1;
+
+  const metaLines = new Set<number>();
+
+  for (let i = 0; i < textLines.length; i++) {
+    const line = textLines[i]!;
+
+    const implicitsMatch = /^Implicits:\s*(\d+)/i.exec(line);
+    if (implicitsMatch) {
+      implicitsCount = parseInt(implicitsMatch[1]!, 10);
+      implicitsStart = i + 1;
+      metaLines.add(i);
+      continue;
+    }
+
+    const rarityMatch = /^Rarity:\s*(\w+)/i.exec(line);
+    if (rarityMatch) {
+      rarity = rarityMatch[1]!.toLowerCase();
+      metaLines.add(i);
+      continue;
+    }
+
+    if (ITEM_META_KEYS.test(line) || /^(prefix|suffix):\s/i.test(line)) {
+      metaLines.add(i);
+      continue;
+    }
+  }
+
+  const dataLines: { idx: number; text: string }[] = [];
+  for (let i = 0; i < textLines.length; i++) {
+    if (!metaLines.has(i)) {
+      dataLines.push({ idx: i, text: textLines[i]! });
+    }
+  }
+
+  if (dataLines.length > 0 && !title) {
+    title = dataLines[0]!.text;
+  }
+  if (dataLines.length > 1 && !baseType) {
+    baseType = dataLines[1]!.text;
+  }
+
+  const mods: PoBMod[] = [];
+
+  if (implicitsStart >= 0) {
+    let implicitFound = 0;
+    for (const dl of dataLines) {
+      if (dl.idx >= implicitsStart && implicitFound < implicitsCount) {
+        mods.push({ text: dl.text, implicit: true, explicit: false, crafted: false });
+        implicitFound++;
+      }
+    }
+
+    for (const dl of dataLines) {
+      if (dl.idx >= implicitsStart + implicitsCount) {
+        const isCrafted = /\{crafted\}/.test(dl.text);
+        mods.push({ text: dl.text, implicit: false, explicit: true, crafted: isCrafted });
+      }
+    }
+  }
+
+  const sockets: PoBSocket[] = [];
+  const socketRegex = /<Socket\b([^/>]*?)\s*\/?>/g;
+  let socketMatch: RegExpExecArray | null;
+  while ((socketMatch = socketRegex.exec(inner)) !== null) {
+    const sAttrs = parseAttrs(socketMatch[1] ?? '');
+    sockets.push({
+      group: parseInt(sAttrs.group ?? '1', 10),
+      attr: sAttrs.attr ?? '',
+    });
+  }
+
+  return {
+    id,
+    title: itemAttrs.title ?? title,
+    baseType,
+    rarity,
+    rawMods: mods,
+    sockets,
+  };
+}
+
+function parseItemLegacyFormat(id: string, itemAttrs: Record<string, string>, inner: string): PoBItem {
+  const baseTypeMatch = /<baseType>([^<]+)<\/baseType>/i.exec(inner);
+  const rarityMatch = /<rarity>([^<]+)<\/rarity>/i.exec(inner);
+
+  const mods: PoBMod[] = [];
+  const modRegex = /<Mod\b([^/>]*?)\s*\/?>/g;
+  let modMatch: RegExpExecArray | null;
+  while ((modMatch = modRegex.exec(inner)) !== null) {
+    const mAttrs = parseAttrs(modMatch[1] ?? '');
+    mods.push({
+      text: mAttrs.text ?? '',
+      implicit: mAttrs.implicit === 'true',
+      explicit: mAttrs.explicit === 'true',
+      crafted: mAttrs.crafted === 'true',
+    });
+  }
+
+  const sockets: PoBSocket[] = [];
+  const socketRegex = /<Socket\b([^/>]*?)\s*\/?>/g;
+  let socketMatch: RegExpExecArray | null;
+  while ((socketMatch = socketRegex.exec(inner)) !== null) {
+    const sAttrs = parseAttrs(socketMatch[1] ?? '');
+    sockets.push({
+      group: parseInt(sAttrs.group ?? '1', 10),
+      attr: sAttrs.attr ?? '',
+    });
+  }
+
+  return {
+    id,
+    title: itemAttrs.title ?? '',
+    baseType: baseTypeMatch?.[1] ?? '',
+    rarity: rarityMatch?.[1] ?? 'normal',
+    rawMods: mods,
+    sockets,
+  };
 }
 
 function parseTreeSection(xml: string): PoBTree {

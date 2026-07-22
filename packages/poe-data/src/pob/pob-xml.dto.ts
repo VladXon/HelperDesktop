@@ -40,6 +40,12 @@ export interface PoBItem {
   sockets: PoBSocket[];
 }
 
+export interface PoBItemSet {
+  id: number;
+  title: string;
+  slotItemIds: Record<string, string>;
+}
+
 export interface PoBTree {
   treeVersion: string;
   nodes: number[];
@@ -58,6 +64,7 @@ export interface PoBXmlDTO {
   build: PoBBuildAttributes;
   skills: PoBSkillSet[];
   items: PoBItem[];
+  itemSets: PoBItemSet[];
   tree: PoBTree;
   config: PoBConfig;
 }

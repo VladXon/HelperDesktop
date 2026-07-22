@@ -1,7 +1,15 @@
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, session as electronSession } from 'electron';
 import type { IGggAuthenticator, GggAuthHeaders, AuthAttemptLog, ValidationResult, ErrorCategory, TransportSelection, PartitionInfo } from './authenticator';
 
-const GGG_BASE = 'https://www.pathofexile.com';
+const GGG_BASE = 'https://api.pathofexile.com';
+
+/**
+ * Cloudflare can return non-200 status codes when blocking requests.
+ * These are NOT real GGG errors — they require CF bypass (BrowserWindow).
+ */
+function isLikelyCloudflareStatus(status: number | null): boolean {
+  return status === 403 || status === 404 || status === 503;
+}
 
 export class BrowserWindowAuthenticator implements IGggAuthenticator {
   readonly id = 'browserwindow-execjs';
@@ -59,60 +67,78 @@ export class BrowserWindowAuthenticator implements IGggAuthenticator {
     let fallbackUsed: string | null = null;
 
     try {
-      await win.webContents.session.clearStorageData({ storages: ['cookies'] });
       await win.webContents.session.cookies.set({
         url: GGG_BASE, name: 'POESESSID', value: this.poesessid,
-        domain: '.pathofexile.com', path: '/', secure: true, sameSite: 'lax',
+        domain: '.pathofexile.com', path: '/', secure: true, sameSite: 'lax', httpOnly: true,
       });
 
-      await win.loadURL(`${GGG_BASE}/api/leagues?type=main`);
+      const targetUrl = `${GGG_BASE}/profile`;
+      console.log(`[PoeAuth] BrowserWindowAuthenticator: loading ${targetUrl}`);
 
-      await new Promise<void>((resolve, reject) => {
-        let finished = false;
-        const timeout = setTimeout(() => { if (!finished) { finished = true; resolve(); } }, 25_000);
-        win.webContents.on('did-finish-load', () => { if (!finished) { finished = true; clearTimeout(timeout); resolve(); } });
-        win.webContents.on('did-fail-load', (_e, code, _desc, _url, isMainFrame) => {
+      const loadResult = await new Promise<{ error: string | null; body: string; status: number }>((resolve) => {
+        let resolved = false;
+        let resBody = '';
+        let resStatus = 0;
+        const done = (error: string | null) => { if (!resolved) { resolved = true; resolve({ error, body: resBody, status: resStatus }); } };
+
+        const timer = setTimeout(() => done(null), 25_000);
+
+        win.webContents.on('did-finish-load', () => { clearTimeout(timer); done(null); });
+        win.webContents.on('did-fail-load', (_e, code, desc, url, isMainFrame) => {
           if (!isMainFrame || code === -3) return;
-          if (!finished) { finished = true; clearTimeout(timeout); reject(new Error(`Page load: ${code}`)); }
+          const msg = `code=${code} desc="${desc}" url="${url}"`;
+          console.log(`[PoeAuth] BrowserWindowAuthenticator: did-fail-load ${msg}`);
+          clearTimeout(timer);
+          done(msg);
+        });
+
+        win.loadURL(targetUrl).catch((err) => {
+          const msg = `loadURL threw: ${(err as Error).message}`;
+          console.log(`[PoeAuth] BrowserWindowAuthenticator: ${msg}`);
+          clearTimeout(timer);
+          done(msg);
         });
       });
 
-      await new Promise((r) => setTimeout(r, 3000));
-
-      const result = await win.webContents.executeJavaScript(`
-        (async () => {
-          try {
-            const res = await fetch('${GGG_BASE}/character-window/get-account-name', {
-              headers: { 'Accept': 'application/json, text/plain, */*' }, credentials: 'include',
-            });
-            const ct = res.headers.get('content-type') || '';
-            const text = await res.text();
-            let json = null; try { json = JSON.parse(text); } catch {}
-            return { ok: true, status: res.status, body: text, isJson: ct.includes('application/json'), data: json };
-          } catch (e) { return { ok: false, error: String(e) }; }
-        })()
-      `) as { ok: boolean; status?: number; body?: string; isJson?: boolean; data?: { name?: string }; error?: string };
-
-      statusCode = result.status ?? null;
-      cfDetected = (result.body ?? '').includes('Cloudflare') || (result.body ?? '').includes('Just a moment');
-
-      if (result.ok && result.status === 200 && result.data?.name) {
-        this.accountName = result.data.name;
-        this.logAttempt('get-account-name', true, 200, performance.now() - t0, cfDetected, null, fallbackUsed);
-        return { valid: true, accountName: result.data.name, errorCategory: null, errorMessage: null, transportSelection };
+      if (loadResult.error) {
+        console.log(`[PoeAuth] BrowserWindowAuthenticator: ✗ page load failed: ${loadResult.error}`);
+        this.logAttempt('profile', false, null, performance.now() - t0, false, 'network_error', fallbackUsed);
+        return { valid: false, errorCategory: 'network_error', errorMessage: loadResult.error, transportSelection };
       }
 
-      errorCategory = cfDetected ? 'cloudflare_block'
-        : statusCode === 401 || statusCode === 403 ? 'session_expired'
-        : statusCode === 429 ? 'rate_limited'
-        : statusCode === 404 ? 'invalid_params'
-        : 'ggg_unavailable';
+      statusCode = loadResult.status || 200;
+      const body = loadResult.body;
+      cfDetected = body.includes('Cloudflare') || body.includes('Just a moment');
 
-      this.logAttempt('get-account-name', false, statusCode, performance.now() - t0, cfDetected, errorCategory, fallbackUsed);
+      let data: { name?: string } | null = null;
+      try { data = JSON.parse(body); } catch { /* not JSON */ }
+
+      if (statusCode === 200 && data?.name) {
+        this.accountName = data.name;
+
+        await this.propagateSessionCookie();
+
+        console.log(`[PoeAuth] BrowserWindowAuthenticator: ✓ validated (account=${data.name})`);
+        this.logAttempt('profile', true, 200, performance.now() - t0, cfDetected, null, fallbackUsed);
+        return { valid: true, accountName: data.name, errorCategory: null, errorMessage: null, transportSelection };
+      }
+
+      const isGggJson = data != null;
+
+      errorCategory = cfDetected ? 'cloudflare_block'
+        : statusCode === 429 ? 'rate_limited'
+        : isGggJson ? 'session_expired'
+        : isLikelyCloudflareStatus(statusCode) ? 'cloudflare_block'
+        : 'session_expired';
+
+      console.log(`[PoeAuth] BrowserWindowAuthenticator: ✗ failed (status=${statusCode}, error=${errorCategory}, isGggJson=${isGggJson})`);
+      this.logAttempt('profile', false, statusCode, performance.now() - t0, cfDetected, errorCategory, fallbackUsed);
       return { valid: false, errorCategory, errorMessage: `BrowserWindow returned ${statusCode}`, transportSelection };
     } catch (err) {
+      const errMsg = (err as Error).message;
+      console.log(`[PoeAuth] BrowserWindowAuthenticator: ✗ unexpected error: ${errMsg}`);
       this.logAttempt('get-account-name', false, null, performance.now() - t0, false, 'network_error', fallbackUsed);
-      return { valid: false, errorCategory: 'network_error', errorMessage: (err as Error).message, transportSelection };
+      return { valid: false, errorCategory: 'network_error', errorMessage: errMsg, transportSelection };
     } finally {
       win.destroy();
     }
@@ -131,6 +157,28 @@ export class BrowserWindowAuthenticator implements IGggAuthenticator {
   }
 
   getAttemptLogs(): AuthAttemptLog[] { return [...this.attempts]; }
+
+  /**
+   * Propagate POESESSID to Chromium default session.
+   * This allows DefaultSessionAuthenticator to use the cookie for subsequent requests.
+   */
+  private async propagateSessionCookie(): Promise<void> {
+    if (!this.poesessid) return;
+    try {
+      await electronSession.defaultSession.cookies.set({
+        url: GGG_BASE,
+        name: 'POESESSID',
+        value: this.poesessid,
+        domain: '.pathofexile.com',
+        path: '/',
+        secure: true,
+        sameSite: 'lax',
+        httpOnly: true,
+      });
+    } catch {
+      // Best-effort — don't fail validation if cookie propagation fails
+    }
+  }
 
   private logAttempt(
     endpoint: string, success: boolean, statusCode: number | null,
