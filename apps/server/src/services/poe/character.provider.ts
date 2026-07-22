@@ -30,9 +30,9 @@ export interface CharacterRecord {
 }
 
 export interface PoeCharacterProvider {
-  fetchAndSaveCharacters(accountId: number, sessionId: string): Promise<CharacterSummary[]>;
+  fetchAndSaveCharacters(accountId: number, sessionId: string, accountName?: string): Promise<CharacterSummary[]>;
   getCharacter(characterId: number): Promise<CharacterRecord>;
-  refreshCharacter(characterId: number, sessionId: string): Promise<CharacterRecord>;
+  refreshCharacter(characterId: number, sessionId: string, accountName?: string): Promise<CharacterRecord>;
   getSnapshots(characterId: number): Promise<Array<{ id: number; level: number; createdAt: string; changeSummary: unknown }>>;
 }
 
@@ -59,8 +59,8 @@ export function createCharacterProvider(): PoeCharacterProvider {
   const ggg = createGggClient();
 
   return {
-    async fetchAndSaveCharacters(accountId: number, sessionId: string): Promise<CharacterSummary[]> {
-      const gggChars = await ggg.getCharacters(sessionId);
+    async fetchAndSaveCharacters(accountId: number, sessionId: string, accountName?: string): Promise<CharacterSummary[]> {
+      const gggChars = await ggg.getCharacters(sessionId, accountName);
       const result: CharacterSummary[] = [];
 
       for (const ch of gggChars) {
@@ -118,14 +118,14 @@ export function createCharacterProvider(): PoeCharacterProvider {
       };
     },
 
-    async refreshCharacter(characterId: number, sessionId: string): Promise<CharacterRecord> {
+    async refreshCharacter(characterId: number, sessionId: string, accountName?: string): Promise<CharacterRecord> {
       const rows = await db.select().from(schema.poeCharacters)
         .where(eq(schema.poeCharacters.id, characterId))
         .limit(1);
       if (rows.length === 0) throw new HttpError(404, 'not_found', 'Character not found');
 
       const ch = rows[0]!;
-      const detail = await ggg.getCharacterDetail(sessionId, ch.name);
+      const detail = await ggg.getCharacterDetail(sessionId, ch.name, accountName);
       const changes = computeChanges(ch.rawJson, detail);
 
       await db.update(schema.poeCharacters)

@@ -122,8 +122,9 @@ export function getSessionProviderCharacters(poeAccountId: string): Promise<{ ch
       .where(eq(schema.poeAccounts.poeAccountId, poeAccountId))
       .limit(1);
     if (accounts.length === 0) throw new HttpError(404, 'not_found', 'PoE account not found');
-    const sessionId = decryptToken(accounts[0]!.accessTokenEncrypted);
+    const account = accounts[0]!;
+    const sessionId = decryptToken(account.accessTokenEncrypted);
     const ggg = createGggClient();
-    return { characters: await ggg.getCharacters(sessionId) };
+    return { characters: await ggg.getCharacters(sessionId, account.accountName) };
   })();
 }

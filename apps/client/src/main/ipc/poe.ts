@@ -3,7 +3,8 @@ import { createPoeAccountService } from '../services/poe/poe-account.service.js'
 import { createPoeTradeService } from '../services/poe/poe-trade.service.js';
 import { createPoeImportService } from '../services/poe/poe-import.service.js';
 import { createPoeAnalysisService } from '../services/poe/poe-analysis.service.js';
-import { convertCharacterToBuild } from '../services/poe/poe-character.service.js';
+import { convertCharacterToBuild, fetchPassiveSkills } from '../services/poe/poe-character.service.js';
+import type { GggCharacterDetail } from '../services/poe/poe-character.service.js';
 import { createModDB } from '@helper/poe-engine';
 import type { ModDB } from '@helper/poe-engine';
 import * as backend from '../services/poe/backend-client.js';
@@ -312,15 +313,52 @@ export function registerPoeIpc(): void {
 
   // ── Analyze character ───────────────────────────────────────────
   ipcMain.handle('poe:analyze-character', async (_e, characterName: string) => {
-    const detail = await backend.getCharacterDetail(characterName);
-    const { build, modifiers, passiveTree } = convertCharacterToBuild(detail as any);
+    const poesessid = getPoesessidAuth()?.getPoesessid();
+    const accountName = poesessid ? await getPoesessidAuth()!.getAccountName() : null;
+
+    const [detail, passiveTreeSnapshot] = await Promise.all([
+      backend.getCharacterDetail(characterName).catch((err: Error) => {
+        console.warn('[poe:analyze] character detail fetch failed:', err.message);
+        return null;
+      }),
+      poesessid && accountName
+        ? fetchPassiveSkills(accountName, characterName, poesessid).catch((err: Error) => {
+            console.warn('[poe:analyze] passive tree fetch failed:', err.message);
+            return null;
+          })
+        : Promise.resolve(null),
+    ]);
+
+    if (!detail) {
+      return {
+        import: {
+          buildSummary: { name: characterName, ascendancy: null, level: 0 },
+          modifierCount: 0,
+        },
+        analysis: {
+          offense: [], defense: [], scaling: [],
+          problems: [], recommendations: [],
+          scores: { total: { overallScore: 0, label: 'N/A' } },
+          metadata: {},
+        },
+        explanation: null,
+        passiveTree: passiveTreeSnapshot,
+      };
+    }
+
+    const gggDetail = detail as unknown as GggCharacterDetail;
+    const { build, modifiers, passiveTree } = convertCharacterToBuild(gggDetail);
+
+    if (passiveTreeSnapshot) {
+      build.passiveTree = passiveTreeSnapshot;
+    }
 
     const analysisResult = await analysis.analyze({ build, modifiers });
 
     return {
       import: {
         buildSummary: {
-          name: (detail as any).character?.name ?? characterName,
+          name: gggDetail.character.name ?? characterName,
           ascendancy: build.character.ascendancy,
           level: build.character.level,
         },

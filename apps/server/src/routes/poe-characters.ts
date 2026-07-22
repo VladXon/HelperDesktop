@@ -57,7 +57,7 @@ export function createPoeCharactersRouter(): Router {
 
       const { decryptToken } = await import('@helper/poe-backend/crypto');
       const sessionId = decryptToken(active.accessTokenEncrypted);
-      const list = await characterProvider.fetchAndSaveCharacters(active.id, sessionId);
+      const list = await characterProvider.fetchAndSaveCharacters(active.id, sessionId, active.accountName ?? undefined);
       const normalized: PoeCharacterSummary[] = list.map(normalizeCharacterSummary);
       res.json(normalized);
     } catch (err) { next(err); }
@@ -73,7 +73,7 @@ export function createPoeCharactersRouter(): Router {
 
       const { decryptToken } = await import('@helper/poe-backend/crypto');
       const sessionId = decryptToken(active.accessTokenEncrypted);
-      const ch = await characterProvider.refreshCharacter(Number(req.params.id), sessionId);
+      const ch = await characterProvider.refreshCharacter(Number(req.params.id), sessionId, active.accountName ?? undefined);
       const normalized: PoeCharacterDetails = normalizeCharacterDetails(ch);
       res.json(normalized);
     } catch (err) { next(err); }

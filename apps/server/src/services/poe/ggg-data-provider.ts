@@ -46,6 +46,6 @@ export interface GggCharacterDetail {
 
 export interface PoeDataProvider {
   getAccountName(poesessid: string): Promise<string>;
-  getCharacters(poesessid: string): Promise<GggCharacter[]>;
-  getCharacterDetail(poesessid: string, characterName: string): Promise<GggCharacterDetail>;
+  getCharacters(poesessid: string, accountName?: string): Promise<GggCharacter[]>;
+  getCharacterDetail(poesessid: string, characterName: string, accountName?: string): Promise<GggCharacterDetail>;
 }

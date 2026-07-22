@@ -5,23 +5,32 @@ import type { GggCharacter, GggCharacterDetail, PoeDataProvider } from './ggg-da
 export type { GggCharacter, GggCharacterDetail, PoeDataProvider };
 
 const API_BASE = 'https://api.pathofexile.com';
+const GGG_WWW = 'https://www.pathofexile.com';
 
 function maskSessionId(poesessid: string): string {
   if (poesessid.length <= 8) return '***';
   return poesessid.slice(0, 4) + '***' + poesessid.slice(-4);
 }
 
-async function gggFetch<T>(path: string, poesessid: string): Promise<T> {
-  const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
+async function gggFetch<T>(path: string, poesessid: string, options?: { method?: string; body?: string; baseUrl?: string }): Promise<T> {
+  const baseUrl = options?.baseUrl ?? API_BASE;
+  const url = path.startsWith('http') ? path : `${baseUrl}${path}`;
+  const method = options?.method ?? 'GET';
+
+  const headers: Record<string, string> = {
+    'User-Agent': 'HelperDesktop/1.0',
+    'Cookie': `POESESSID=${poesessid}`,
+  };
+
+  if (options?.body) {
+    headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8';
+    headers['Accept'] = 'application/json, text/javascript, */*; q=0.01';
+    headers['X-Requested-With'] = 'XMLHttpRequest';
+  }
 
   let res: Response;
   try {
-    res = await fetch(url, {
-      headers: {
-        'User-Agent': 'HelperDesktop/1.0',
-        'Cookie': `POESESSID=${poesessid}`,
-      },
-    });
+    res = await fetch(url, { method, headers, body: options?.body });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     log.info('ggg_unavailable', { path, error: msg });
@@ -62,15 +71,32 @@ export function createGggClient(): PoeDataProvider {
       return data.name;
     },
 
-    async getCharacters(poesessid: string): Promise<Array<{ name: string; league: string; class: string; level: number }>> {
+    async getCharacters(poesessid: string, accountName?: string): Promise<Array<{ name: string; league: string; class: string; level: number }>> {
       log.info('ggg_get_characters', { session: maskSessionId(poesessid) });
-      const data = await gggFetch<Array<{ name: string; league: string; class: string; level: number }>>('/character-window/get-characters', poesessid);
+      const body = new URLSearchParams({
+        accountName: accountName ?? '',
+        realm: 'pc',
+      }).toString();
+      const data = await gggFetch<Array<{ name: string; league: string; class: string; level: number }>>(
+        '/character-window/get-characters',
+        poesessid,
+        { method: 'POST', body, baseUrl: GGG_WWW },
+      );
       return data ?? [];
     },
 
-    async getCharacterDetail(poesessid: string, characterName: string): Promise<GggCharacterDetail> {
+    async getCharacterDetail(poesessid: string, characterName: string, accountName?: string): Promise<GggCharacterDetail> {
       log.info('ggg_get_character_detail', { session: maskSessionId(poesessid), character: characterName });
-      return gggFetch<GggCharacterDetail>(`/character-window/get-items?character=${encodeURIComponent(characterName)}`, poesessid);
+      const body = new URLSearchParams({
+        character: characterName,
+        accountName: accountName ?? '',
+        realm: 'pc',
+      }).toString();
+      return gggFetch<GggCharacterDetail>(
+        '/character-window/get-items',
+        poesessid,
+        { method: 'POST', body, baseUrl: GGG_WWW },
+      );
     },
   };
 }

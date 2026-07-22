@@ -1,6 +1,7 @@
 import { BrowserWindow, net } from 'electron';
 
 const GGG_BASE = 'https://api.pathofexile.com';
+const GGG_WWW = 'https://www.pathofexile.com';
 
 export interface GggCharacter {
   name: string;
@@ -95,15 +96,18 @@ function makeGggError(status: number, bodyText: string, isHtml?: boolean): Error
   return Object.assign(new Error(`GGG API returned ${status}`), { code: 'ggg_unavailable' });
 }
 
-async function fetchViaWindow<T>(path: string, poesessid: string): Promise<T> {
-  const url = `${GGG_BASE}${path}`;
+async function fetchViaWindow<T>(path: string, poesessid: string, options?: { method?: string; body?: string; baseUrl?: string }): Promise<T> {
+  const baseUrl = options?.baseUrl ?? GGG_BASE;
+  const url = `${baseUrl}${path}`;
+  const method = options?.method ?? 'GET';
+  const requestBody = options?.body;
   const win = createGggWindow();
 
   try {
     await win.webContents.session.clearStorageData({ storages: ['cookies'] });
 
     await win.webContents.session.cookies.set({
-      url: GGG_BASE,
+      url: GGG_WWW,
       name: 'POESESSID',
       value: poesessid,
       domain: '.pathofexile.com',
@@ -113,7 +117,7 @@ async function fetchViaWindow<T>(path: string, poesessid: string): Promise<T> {
       httpOnly: true,
     });
 
-    await win.loadURL(`${GGG_BASE}/api/leagues?type=main`);
+    await win.loadURL(`${GGG_WWW}/`);
 
     await new Promise<void>((resolve, reject) => {
       let finished = false;
@@ -137,8 +141,14 @@ async function fetchViaWindow<T>(path: string, poesessid: string): Promise<T> {
       (async () => {
         try {
           const res = await fetch(${JSON.stringify(url)}, {
-            headers: { 'Accept': 'application/json' },
+            method: ${JSON.stringify(method)},
+            headers: ${JSON.stringify({
+              'Accept': 'application/json, text/javascript, */*; q=0.01',
+              'Content-Type': requestBody ? 'application/x-www-form-urlencoded; charset=UTF-8' : undefined,
+              'X-Requested-With': requestBody ? 'XMLHttpRequest' : undefined,
+            })},
             credentials: 'include',
+            ${requestBody ? `body: ${JSON.stringify(requestBody)}` : ''}
           });
           const contentType = res.headers.get('content-type') || '';
           const isJson = contentType.includes('application/json');
@@ -182,17 +192,22 @@ export function createElectronGggProvider() {
     async getCharacters(poesessid: string, accountName?: string): Promise<GggCharacter[]> {
       console.log('[ggg:electron] getCharacters', maskSessionId(poesessid));
       const query = accountName ? `?accountName=${encodeURIComponent(accountName)}` : '';
-      const data = await fetchViaWindow<GggCharacter[]>(`/character-window/get-characters${query}`, poesessid);
+      const data = await fetchViaWindow<GggCharacter[]>(`/character-window/get-characters${query}`, poesessid, { baseUrl: GGG_WWW });
       return data ?? [];
     },
 
     async getCharacterDetail(poesessid: string, characterName: string, accountName?: string): Promise<GggCharacterDetail> {
       console.log('[ggg:electron] getCharacterDetail', maskSessionId(poesessid), characterName);
-      const query = [
-        `character=${encodeURIComponent(characterName)}`,
-        accountName ? `accountName=${encodeURIComponent(accountName)}` : '',
-      ].filter(Boolean).join('&');
-      return fetchViaWindow<GggCharacterDetail>(`/character-window/get-items?${query}`, poesessid);
+      const body = new URLSearchParams({
+        character: characterName,
+        accountName: accountName ?? '',
+        realm: 'pc',
+      }).toString();
+      return fetchViaWindow<GggCharacterDetail>(
+        '/character-window/get-items',
+        poesessid,
+        { method: 'POST', body, baseUrl: GGG_WWW },
+      );
     },
   };
 }

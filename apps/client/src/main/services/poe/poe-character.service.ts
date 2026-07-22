@@ -1,3 +1,4 @@
+import { net } from 'electron';
 import { createModifier, S } from '@helper/poe-engine';
 import type { Modifier } from '@helper/poe-engine';
 import {
@@ -20,6 +21,60 @@ import type {
   EquipmentSlot,
   ItemRarity,
 } from '@helper/shared';
+
+export interface GggPassiveSkillsResponse {
+  character: number;
+  ascendancy: number;
+  alternate_ascendancy: number;
+  hashes: number[];
+  hashes_ex: number[];
+  mastery_effects: Record<string, number>;
+  skill_overrides: Record<string, {
+    name?: string;
+    isMastery?: boolean;
+    isTattoo?: boolean;
+    stats?: string[];
+    [key: string]: unknown;
+  }>;
+  items: unknown[];
+  jewel_data: Record<string, unknown>;
+}
+
+export function fetchPassiveSkills(accountName: string, characterName: string, poesessid: string): Promise<PassiveTreeSnapshot> {
+  return _fetchPassiveSkillsImpl(accountName, characterName, poesessid);
+}
+
+async function _fetchPassiveSkillsImpl(accountName: string, characterName: string, poesessid: string): Promise<PassiveTreeSnapshot> {
+  const url = `https://www.pathofexile.com/character-window/get-passive-skills?accountName=${encodeURIComponent(accountName)}&realm=pc&character=${encodeURIComponent(characterName)}`;
+
+  const res = await net.fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36',
+      'Accept': 'application/json, text/plain, */*',
+      'Cookie': `POESESSID=${poesessid}`,
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(`GGG passive skills API returned ${res.status} ${res.statusText}`);
+  }
+
+  const data: GggPassiveSkillsResponse = await res.json();
+
+  const masteryChoices: Record<number, string> = {};
+  for (const [nodeHash, effectId] of Object.entries(data.mastery_effects)) {
+    masteryChoices[Number(nodeHash)] = String(effectId);
+  }
+
+  return {
+    version: '3_25',
+    allocatedHashes: [...data.hashes, ...data.hashes_ex],
+    masteryChoices,
+    keystones: [],
+    clusterJewels: [],
+    ascendancyNodes: [],
+  };
+}
 
 export interface CharacterPassiveTree {
   allocatedNodes: number[];
