@@ -133,23 +133,29 @@ function RoutedShell(): React.JSX.Element {
   if (!user) {
     return <LoginScreen />;
   }
-  return <MainApp />;
+  return (
+    <ErrorBoundary>
+      <MainApp />
+    </ErrorBoundary>
+  );
 }
 
 export function App(): React.JSX.Element {
   return (
-    <QueryProvider>
-      <SettingsProvider>
-        <AuthProvider>
-          <RouterProvider>
-            <TooltipProvider delayDuration={200}>
-              <ToastProvider>
-                <RoutedShell />
-              </ToastProvider>
-            </TooltipProvider>
-          </RouterProvider>
-        </AuthProvider>
-      </SettingsProvider>
-    </QueryProvider>
+    <ErrorBoundary>
+      <QueryProvider>
+        <SettingsProvider>
+          <AuthProvider>
+            <RouterProvider>
+              <TooltipProvider delayDuration={200}>
+                <ToastProvider>
+                  <RoutedShell />
+                </ToastProvider>
+              </TooltipProvider>
+            </RouterProvider>
+          </AuthProvider>
+        </SettingsProvider>
+      </QueryProvider>
+    </ErrorBoundary>
   );
 }
