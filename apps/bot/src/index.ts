@@ -12,7 +12,7 @@ import { createNotificationsPoller } from './polling/notifications.js';
 try {
   const { readFileSync, existsSync } = await import('node:fs');
   const { join } = await import('node:path');
-  const envPath = join(import.meta.dirname ?? process.cwd(), '..', 'server', '.env');
+  const envPath = join(import.meta.dirname ?? process.cwd(), '..', '..', 'server', '.env');
   if (existsSync(envPath)) {
     const raw = readFileSync(envPath, 'utf-8');
     for (const line of raw.split('\n')) {
