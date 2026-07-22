@@ -9,6 +9,28 @@ import { buildMenu } from './helpers.js';
 import { createRemindersPoller } from './polling/reminders.js';
 import { createNotificationsPoller } from './polling/notifications.js';
 
+try {
+  const { readFileSync, existsSync } = await import('node:fs');
+  const { join } = await import('node:path');
+  const envPath = join(import.meta.dirname ?? process.cwd(), '..', 'server', '.env');
+  if (existsSync(envPath)) {
+    const raw = readFileSync(envPath, 'utf-8');
+    for (const line of raw.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eqIdx = trimmed.indexOf('=');
+      if (eqIdx === -1) continue;
+      const key = trimmed.slice(0, eqIdx).trim();
+      const value = trimmed.slice(eqIdx + 1).trim();
+      if (key && !process.env[key]) {
+        process.env[key] = value;
+      }
+    }
+  }
+} catch {
+  // .env loading is best-effort
+}
+
 export interface BotRuntime {
   bot: Bot<BotContext>;
   server: ServerClient;
