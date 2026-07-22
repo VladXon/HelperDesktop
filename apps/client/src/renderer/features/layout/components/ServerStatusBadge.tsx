@@ -19,12 +19,13 @@ interface VpsEntry {
 const servers: VpsEntry[] = [
   { id: 'server', url: 'http://2.26.80.138:3001', label: 'Сервер — Germany' },
 ];
+const DEFAULT_SERVER = servers[0]!.id;
 
 type HealthStatus = 'online' | 'offline' | 'checking';
 
 export function ServerStatusBadge(): React.JSX.Element {
   const currentHealth = useServerHealth();
-  const [activeServer, setActiveServer] = React.useState<string>('server');
+  const [activeServer, setActiveServer] = React.useState<string>(DEFAULT_SERVER);
   const [health, setHealth] = React.useState<Record<string, HealthStatus>>({});
   const [loaded, setLoaded] = React.useState(false);
 
@@ -37,7 +38,10 @@ export function ServerStatusBadge(): React.JSX.Element {
 
   React.useEffect(() => {
     if (!loaded) return;
-    window.api.server.setUrl(servers.find((s) => s.id === activeServer)!.url);
+    const entry = servers.find((s) => s.id === activeServer);
+    if (entry) {
+      window.api.server.setUrl(entry.url);
+    }
   }, [activeServer, loaded]);
 
   React.useEffect(() => {
@@ -61,7 +65,9 @@ export function ServerStatusBadge(): React.JSX.Element {
     window.api.settings.set('vps:active', id);
   };
 
-  const currentStatus = health[activeServer] ?? currentHealth.state;
+  const entry = servers.find((s) => s.id === activeServer);
+  const resolvedId = entry?.id ?? DEFAULT_SERVER;
+  const currentStatus = health[resolvedId] ?? currentHealth.state;
   const TriggerIcon = currentStatus === 'online' ? CheckCircle : currentStatus === 'offline' ? XCircle : CircleNotch;
   const triggerColor = currentStatus === 'online' ? 'text-green-400' : currentStatus === 'offline' ? 'text-red-400' : 'text-text-muted';
 
@@ -81,7 +87,7 @@ export function ServerStatusBadge(): React.JSX.Element {
         <DropdownMenuSeparator />
         {servers.map((s) => {
           const h = health[s.id] ?? 'checking';
-          const isActive = s.id === activeServer;
+          const isActive = s.id === resolvedId;
           const Icon = h === 'online' ? CheckCircle : h === 'offline' ? XCircle : CircleNotch;
           const color = h === 'online' ? 'text-green-400' : h === 'offline' ? 'text-red-400' : 'text-text-muted';
           return (
