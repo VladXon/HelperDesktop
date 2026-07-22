@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+.pnpm-store/
 
 # Build output
 dist/
@@ -7,24 +8,31 @@ out/
 .vite/
 release/
 coverage/
-
-# TypeScript
 *.tsbuildinfo
 
 # Environment
 .env
 .env.local
 .env.*.local
+!.env.example
 
 # Logs
 *.log
-apps/server/logs/
-apps/bot/logs/
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
 # Database
 *.db
 *.db-shm
 *.db-wal
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.dump
+*.backup
 
 # IDE / Editor
 .vscode/
@@ -37,6 +45,7 @@ apps/bot/logs/
 .DS_Store
 Thumbs.db
 Desktop.ini
+ehthumbs.db
 
 # Temp
 tmp/
@@ -44,10 +53,28 @@ temp/
 *.tmp
 *.b64
 
+# Electron
+apps/client/release/
+apps/client/dist/
+apps/client/out/
+apps/client/.vite/
+apps/client/*.tsbuildinfo
+apps/client/test-renderer-dev.mjs
+
+# Server
+apps/server/logs/
+apps/server/helperdesktop.db*
+apps/server/*.db*
+
 # Bot
+apps/bot/logs/
 apps/bot/bot-config.json
 
-# Superpowers task tracking
+# Packages
+packages/*/dist/
+packages/*/node_modules/
+
+# Config
 .superpowers/sdd/
 
 # Design artifacts (auto-generated HTML/PNG from AI)
@@ -55,8 +82,22 @@ docs/design-specs/**/*.html
 docs/design-specs/**/*.png
 
 # Dev / test helpers
-apps/client/test-renderer-dev.mjs
 .github/workflows/README.md
 
 # AI push notifications
 ai-push.json
+
+# Certificates / secrets
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.cert
+
+# HAR files (auth benchmarks)
+*.har
+
+# PM2
+pm2.pid
+.dump

@@ -109,25 +109,27 @@ features/<name>/
 
 ## Database
 
-### Schema (Drizzle + SQLite)
-- `sqliteTable` from `drizzle-orm/sqlite-core`
+### Schema (Drizzle ORM)
+
+- PostgreSQL with `node-postgres` in production, SQLite in-memory for tests
 - Column names: snake_case in DB (`user_id`, `created_at`)
-- Primary keys: `integer('id').primaryKey({ autoIncrement: true })`
-- Booleans: `integer('pinned', { mode: 'boolean' }).notNull().default(false)`
+- Primary keys: `serial('id').primaryKey()` (PostgreSQL) or `integer('id').primaryKey({ autoIncrement: true })` (SQLite)
+- Booleans: `integer('pinned', { mode: 'boolean' }).notNull().default(false)` (SQLite) or `boolean('pinned').notNull().default(false)` (PostgreSQL)
 - Foreign keys: `.references(() => users.id, { onDelete: 'cascade' })`
 - Indexes: `uniqueIndex(...).on(...)`, `index(...).on(...)`
-- Timestamps: `default(sql`(datetime('now'))`)`
-- Partial indexes: `.where(sql`...`)`
+- Timestamps: `timestamp('created_at').defaultNow()` (PostgreSQL) or `default(sql\`(datetime('now'))\`)` (SQLite)
+- Partial indexes: `.where(sql\`...\`)`
 
 ### Connection
-- Singleton: `getDb()`, `getRaw()`, `setDb()`, `resetDb()` in `db/index.ts`
-- WAL mode, foreign_keys ON
+- Server: `getDb()` returns Drizzle instance with PostgreSQL pool
+- Tests: in-memory SQLite via `better-sqlite3`
+- Foreign keys enabled, connection pooling via `node-postgres`
 
 ### Queries
-- Chainable API: `db.select().from(schema.notes).where(eq(...)).all()`
-- Insert: `.insert(schema.notes).values({...}).run()` or `.returning().all()`
-- Update: `.update(schema.notes).set({...}).where(eq(...)).run()`
-- Delete: `.delete(schema.notes).where(eq(...)).run()`
+- Chainable API: `db.select().from(schema.notes).where(eq(...))`
+- Insert: `.insert(schema.notes).values({...}).returning()`
+- Update: `.update(schema.notes).set({...}).where(eq(...))`
+- Delete: `.delete(schema.notes).where(eq(...))`
 
 ---
 

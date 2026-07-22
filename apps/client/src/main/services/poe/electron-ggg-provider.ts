@@ -173,7 +173,7 @@ export function createElectronGggProvider() {
   return {
     async getAccountName(poesessid: string): Promise<string> {
       console.log('[ggg:electron] getAccountName', maskSessionId(poesessid));
-      const data = await fetchViaWindow<{ name?: string }>('/api/profile', poesessid);
+      const data = await fetchViaWindow<{ name?: string }>('/character-window/get-account-name', poesessid);
       if (!data?.name) throw Object.assign(new Error('Could not validate POESESSID — no account name returned'), { code: 'session_invalid' });
       return data.name;
     },

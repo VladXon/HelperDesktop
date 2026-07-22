@@ -16,7 +16,11 @@
     "test": "vitest run --config vitest.config.ts",
     "test:e2e": "echo \"client e2e: see Phase 7\"",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
-    "lint": "echo \"lint: not configured\""
+    "lint": "echo \"lint: not configured\"",
+    "auth:benchmark": "vite build --config vite.auth-benchmark.config.ts && electron .vite/auth-benchmark/main.js --mode=benchmark",
+    "auth:stress": "vite build --config vite.auth-benchmark.config.ts && electron .vite/auth-benchmark/main.js --mode=stress",
+    "auth:compare": "vite build --config vite.auth-benchmark.config.ts && electron .vite/auth-benchmark/index.js --mode=compare",
+    "auth:verify": "vite build --config vite.auth-benchmark.config.ts && electron .vite/auth-benchmark/verify.js --mode=verify"
   },
   "dependencies": {
     "@floating-ui/react-dom": "^2.1.9",

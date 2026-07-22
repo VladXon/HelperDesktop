@@ -8,13 +8,34 @@ import { createModDB } from '@helper/poe-engine';
 import type { ModDB } from '@helper/poe-engine';
 import * as backend from '../services/poe/backend-client.js';
 import { createElectronGggProvider } from '../services/poe/electron-ggg-provider.js';
+import {
+  getGggAuthenticator,
+  getPoesessidAuth,
+  getBrowserWindowAuth,
+} from '../services/poe/auth/factory.js';
+import { isNewAuthEnabled } from '../services/poe/auth/feature-flag.js';
+import type { IGggAuthenticator, AuthAttemptLog } from '../services/poe/auth/authenticator.js';
 
 let _poeInitialized = false;
 let _modDb: ModDB | null = null;
+let _newAuth: IGggAuthenticator | null = null;
 
 function getModDb(): ModDB {
   if (!_modDb) _modDb = createModDB();
   return _modDb;
+}
+
+function getNewAuth(): IGggAuthenticator {
+  if (!_newAuth) _newAuth = getGggAuthenticator();
+  return _newAuth;
+}
+
+/** Устанавливает POESESSID во все authenticators в цепочке */
+function setNewAuthPoesessid(poesessid: string): void {
+  const poeAuth = getPoesessidAuth();
+  const bwAuth = getBrowserWindowAuth();
+  if (poeAuth) poeAuth.setPoesessid(poesessid);
+  if (bwAuth) bwAuth.setPoesessid(poesessid);
 }
 
 export function registerPoeIpc(): void {
@@ -27,20 +48,87 @@ export function registerPoeIpc(): void {
   const analysis = createPoeAnalysisService(getModDb());
   const gggProvider = createElectronGggProvider();
 
-  // ── Session management (delegated to account service) ──
-  ipcMain.handle('poe:set-session', async (_e, poesessid: string) => {
-    const { valid, accountName } = await account.validateSession(poesessid);
-    if (valid) {
-      await account.writeSession({ poesessid, accountName: accountName ?? null, validatedAt: Date.now() });
-      return { valid: true, accountName };
-    }
-    return { valid: false };
-  });
+  // ── NEW: Unified auth (feature-flagged) ────────────────────────
+  if (isNewAuthEnabled()) {
+    console.log('[auth:migration] new IGggAuthenticator chain active');
 
-  ipcMain.handle('poe:get-session', () => account.getSession());
-  ipcMain.handle('poe:clear-session', () => account.clearSession());
+    ipcMain.handle('poe:auth-validate', async (_e, poesessid?: string) => {
+      const auth = getNewAuth();
+      if (poesessid) setNewAuthPoesessid(poesessid);
+      const vr = await auth.validate();
+      return {
+        valid: vr.valid,
+        accountName: vr.accountName ?? null,
+        errorCategory: vr.errorCategory,
+        errorMessage: vr.errorMessage,
+      };
+    });
 
-  // ── Trade / data (delegated to trade service) ──
+    ipcMain.handle('poe:auth-status', async () => {
+      const auth = getNewAuth();
+      const vr = await auth.validate();
+      const logs = auth.getAttemptLogs();
+      return {
+        valid: vr.valid,
+        accountName: vr.accountName ?? null,
+        lastAttempt: logs[logs.length - 1] ?? null,
+        attemptCount: logs.length,
+      };
+    });
+
+    ipcMain.handle('poe:auth-logs', async () => {
+      return getNewAuth().getAttemptLogs();
+    });
+
+    ipcMain.handle('poe:auth-clear', async () => {
+      await getNewAuth().invalidate();
+      return { cleared: true };
+    });
+
+    ipcMain.handle('poe:auth-set-poesessid', async (_e, poesessid: string) => {
+      setNewAuthPoesessid(poesessid);
+      return { ok: true };
+    });
+  }
+
+  // ── Session management ─────────────────────────────────────────
+  // OLD: delegated to account service (legacy, kept when feature flag off)
+  if (!isNewAuthEnabled()) {
+    ipcMain.handle('poe:set-session', async (_e, poesessid: string) => {
+      const { valid, accountName } = await account.validateSession(poesessid);
+      if (valid) {
+        await account.writeSession({ poesessid, accountName: accountName ?? null, validatedAt: Date.now() });
+        return { valid: true, accountName };
+      }
+      return { valid: false };
+    });
+
+    ipcMain.handle('poe:get-session', () => account.getSession());
+    ipcMain.handle('poe:clear-session', () => account.clearSession());
+  } else {
+    // NEW AUTH: session handlers use unified authenticator
+    ipcMain.handle('poe:set-session', async (_e, poesessid: string) => {
+      setNewAuthPoesessid(poesessid);
+      const vr = await getNewAuth().validate();
+      return { valid: vr.valid, accountName: vr.accountName ?? null };
+    });
+
+    ipcMain.handle('poe:get-session', async () => {
+      const vr = await getNewAuth().validate();
+      return {
+        configured: true,
+        valid: vr.valid,
+        accountName: vr.accountName ?? null,
+      };
+    });
+
+    ipcMain.handle('poe:clear-session', async () => {
+      await getNewAuth().invalidate();
+      return { cleared: true };
+    });
+  }
+
+  // ── Trade / data ────────────────────────────────────────────────
   ipcMain.handle('poe:get-leagues', () => trade.getLeagues());
   ipcMain.handle('poe:fetch-exchange-rate', (_e, league: string, have: string, want: string) =>
     trade.fetchExchangeRate(league, have, want),
@@ -50,13 +138,36 @@ export function registerPoeIpc(): void {
   );
   ipcMain.handle('poe:fetch-exchange-history', () => trade.fetchExchangeHistory());
 
-  // ── Characters / stash (delegated to account service) ──
-  ipcMain.handle('poe:fetch-characters', () => account.fetchCharacters());
-  ipcMain.handle('poe:fetch-stash-items', (_e, league: string, tabIndex: number) =>
-    account.fetchStashItems(league, tabIndex),
-  );
+  // ── Characters / stash ──────────────────────────────────────────
+  if (!isNewAuthEnabled()) {
+    ipcMain.handle('poe:fetch-characters', () => account.fetchCharacters());
+    ipcMain.handle('poe:fetch-stash-items', (_e, league: string, tabIndex: number) =>
+      account.fetchStashItems(league, tabIndex),
+    );
+  } else {
+    ipcMain.handle('poe:fetch-characters', async () => {
+      const auth = getNewAuth();
+      const valid = await auth.validate();
+      if (!valid.valid) throw new Error('Session expired or not configured');
 
-  // ── NEW: PoB import ──
+      // TODO: integrate trade service with new auth — for now, fall back to account service
+      const ses = await account.getSessionId();
+      if (!ses) throw new Error('Cannot read POESESSID from legacy storage');
+      return account.fetchCharacters();
+    });
+
+    ipcMain.handle('poe:fetch-stash-items', async (_e, league: string, tabIndex: number) => {
+      const auth = getNewAuth();
+      const valid = await auth.validate();
+      if (!valid.valid) throw new Error('Session expired or not configured');
+
+      const ses = await account.getSessionId();
+      if (!ses) throw new Error('Cannot read POESESSID from legacy storage');
+      return account.fetchStashItems(league, tabIndex);
+    });
+  }
+
+  // ── PoB import ──────────────────────────────────────────────────
   ipcMain.handle('poe:import-url', async (_e, url: string) => {
     const result = await importService.importFromUrl(url);
     return {
@@ -83,7 +194,7 @@ export function registerPoeIpc(): void {
     };
   });
 
-  // ── NEW: Build analysis ──
+  // ── Build analysis ──────────────────────────────────────────────
   ipcMain.handle('poe:analyze', async (_e, urlOrXml: string, isUrl?: boolean) => {
     const importResult = isUrl
       ? await importService.importFromUrl(urlOrXml)
@@ -124,38 +235,22 @@ export function registerPoeIpc(): void {
         metadata: analysisResult.legacy.metadata,
       },
       explanation: analysisResult.explanation
-        ? {
-            summary: analysisResult.explanation.summary,
-          }
+        ? { summary: analysisResult.explanation.summary }
         : null,
     };
   });
 
-  // ── Phase 10: Backend persistence ──
-  ipcMain.handle('poe:save-build', async (_e, data) => {
-    return backend.saveBuild(data);
-  });
+  // ── Backend persistence ─────────────────────────────────────────
+  ipcMain.handle('poe:save-build', async (_e, data) => backend.saveBuild(data));
+  ipcMain.handle('poe:list-builds', async () => backend.listBuilds());
+  ipcMain.handle('poe:delete-build', async (_e, buildHash: string) => backend.deleteBuild(buildHash));
+  ipcMain.handle('poe:compare-builds', async (_e, hashA: string, hashB: string) =>
+    backend.compareBuilds(hashA, hashB),
+  );
 
-  ipcMain.handle('poe:list-builds', async () => {
-    return backend.listBuilds();
-  });
-
-  ipcMain.handle('poe:delete-build', async (_e, buildHash: string) => {
-    return backend.deleteBuild(buildHash);
-  });
-
-  ipcMain.handle('poe:compare-builds', async (_e, hashA: string, hashB: string) => {
-    return backend.compareBuilds(hashA, hashB);
-  });
-
-  // ── Phase 10: PoE OAuth ──
-  ipcMain.handle('poe:get-accounts', async () => {
-    return backend.getAccounts();
-  });
-
-  ipcMain.handle('poe:disconnect-account', async (_e, id: number) => {
-    return backend.disconnectAccount(id);
-  });
+  // ── PoE OAuth ───────────────────────────────────────────────────
+  ipcMain.handle('poe:get-accounts', async () => backend.getAccounts());
+  ipcMain.handle('poe:disconnect-account', async (_e, id: number) => backend.disconnectAccount(id));
 
   ipcMain.handle('poe:get-auth-url', async () => {
     const { authUrl, state } = await backend.getAuthUrl();
@@ -163,35 +258,44 @@ export function registerPoeIpc(): void {
     return { authUrl, state };
   });
 
-  ipcMain.handle('poe:complete-oauth', async (_e, code: string, state: string) => {
-    return backend.completeOAuth(code, state);
-  });
+  ipcMain.handle('poe:complete-oauth', async (_e, code: string, state: string) =>
+    backend.completeOAuth(code, state),
+  );
 
-  ipcMain.handle('poe:get-oauth-status', async () => {
-    return backend.getOAuthStatus();
-  });
+  ipcMain.handle('poe:get-oauth-status', async () => backend.getOAuthStatus());
+  ipcMain.handle('poe:fetch-oauth-characters', async () => backend.fetchOAuthCharacters());
+  ipcMain.handle('poe:fetch-character-detail', async (_e, name: string) =>
+    backend.getCharacterDetail(name),
+  );
 
-  ipcMain.handle('poe:fetch-oauth-characters', async () => {
-    return backend.fetchOAuthCharacters();
-  });
+  // ── Session connect (backend) ───────────────────────────────────
+  // OLD: validates via electron-ggg-provider's BrowserWindow
+  if (!isNewAuthEnabled()) {
+    ipcMain.handle('poe:connect-session', async (_e, poeSessionId: string) => {
+      const accountName = await gggProvider.getAccountName(poeSessionId);
+      return backend.connectSession(poeSessionId, accountName);
+    });
+  } else {
+    // NEW AUTH: validates via fallback chain (session → poesessid → browserwindow)
+    ipcMain.handle('poe:connect-session', async (_e, poeSessionId: string) => {
+      setNewAuthPoesessid(poeSessionId);
+      const vr = await getNewAuth().validate();
+      if (!vr.valid) {
+        throw Object.assign(
+          new Error(vr.errorMessage ?? 'PoE session expired — reconnect your Path of Exile account'),
+          { code: vr.errorCategory ?? 'session_expired' },
+        );
+      }
+      return backend.connectSession(poeSessionId, vr.accountName ?? undefined);
+    });
+  }
 
-  ipcMain.handle('poe:fetch-character-detail', async (_e, name: string) => {
-    return backend.getCharacterDetail(name);
-  });
-
-  ipcMain.handle('poe:connect-session', async (_e, poeSessionId: string) => {
-    const accountName = await gggProvider.getAccountName(poeSessionId);
-    return backend.connectSession(poeSessionId, accountName);
-  });
-
+  // ── Analyze character ───────────────────────────────────────────
   ipcMain.handle('poe:analyze-character', async (_e, characterName: string) => {
     const detail = await backend.getCharacterDetail(characterName);
     const { build, modifiers, passiveTree } = convertCharacterToBuild(detail as any);
 
-    const analysisResult = await analysis.analyze({
-      build,
-      modifiers,
-    });
+    const analysisResult = await analysis.analyze({ build, modifiers });
 
     return {
       import: {
@@ -207,17 +311,12 @@ export function registerPoeIpc(): void {
         defense: analysisResult.legacy.facts.defense,
         scaling: analysisResult.legacy.facts.scaling,
         problems: analysisResult.legacy.insights.problems.map((p) => ({
-          severity: p.severity,
-          message: p.message,
-          category: p.category,
+          severity: p.severity, message: p.message, category: p.category,
         })),
         recommendations: analysisResult.legacy.insights.recommendations.map((r) => ({
-          itemSlot: r.itemSlot,
-          upgradePriority: r.upgradePriority,
-          targetStats: r.targetStats,
-          estimatedBudgetLow: r.estimatedBudgetLow,
-          estimatedBudgetHigh: r.estimatedBudgetHigh,
-          improvementPercent: r.improvementPercent,
+          itemSlot: r.itemSlot, upgradePriority: r.upgradePriority,
+          targetStats: r.targetStats, estimatedBudgetLow: r.estimatedBudgetLow,
+          estimatedBudgetHigh: r.estimatedBudgetHigh, improvementPercent: r.improvementPercent,
         })),
         scores: analysisResult.legacy.scores,
         metadata: analysisResult.legacy.metadata,
@@ -229,20 +328,9 @@ export function registerPoeIpc(): void {
     };
   });
 
-  // ── Character API (backend persistence) ──
-  ipcMain.handle('poe:list-characters', async () => {
-    return backend.listCharacters();
-  });
-
-  ipcMain.handle('poe:sync-characters', async () => {
-    return backend.syncCharacters();
-  });
-
-  ipcMain.handle('poe:get-character', async (_e, id: number) => {
-    return backend.getCharacter(id);
-  });
-
-  ipcMain.handle('poe:refresh-character', async (_e, id: number) => {
-    return backend.refreshCharacter(id);
-  });
+  // ── Character API ───────────────────────────────────────────────
+  ipcMain.handle('poe:list-characters', async () => backend.listCharacters());
+  ipcMain.handle('poe:sync-characters', async () => backend.syncCharacters());
+  ipcMain.handle('poe:get-character', async (_e, id: number) => backend.getCharacter(id));
+  ipcMain.handle('poe:refresh-character', async (_e, id: number) => backend.refreshCharacter(id));
 }

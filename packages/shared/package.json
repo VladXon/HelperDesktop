@@ -1,6 +1,7 @@
 {
   "name": "@helper/shared",
   "version": "0.1.0",
+  "description": "Shared Zod schemas and TypeScript types for all workspace packages",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",

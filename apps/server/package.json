@@ -1,6 +1,7 @@
 {
   "name": "@helper/server",
   "version": "0.1.0",
+  "description": "Express REST API — auth, notes, presets, PoE integration, PostgreSQL",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",

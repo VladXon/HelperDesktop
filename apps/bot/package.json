@@ -1,6 +1,7 @@
 {
   "name": "@helper/bot",
   "version": "0.1.0",
+  "description": "Telegram bot — notes, notifications, QR login via grammy",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
