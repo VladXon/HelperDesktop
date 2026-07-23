@@ -34,6 +34,36 @@ The app authenticates via your existing GGG login session to provide real-time c
 
 ## Features
 
+### 📥 PoB Import
+
+| Feature | Description |
+|---------|-------------|
+| XML Parsing | Path of Building Community XML import |
+| Build Domain | Full conversion to typed build domain model |
+| Item Mod Parsing | ~30+ mod patterns, 71% coverage |
+| Condition Parser | Flask, charge, and conditional modifier support |
+| Tree Converter | Passive tree node extraction from XML |
+
+### 🧮 Engine Calculation
+
+| Feature | Description |
+|---------|-------------|
+| Defense Pipeline | Life, ES, Armour, Evasion, Resistances, Block |
+| Offense Pipeline | Hit damage, crit, attack/cast speed |
+| Modifier Aggregator | Increased/reduced/more/less stacking |
+| Mechanic Resolvers | Keystones, charges, conditional mods |
+| Stat Registry | 106+ stat keys, 10 categories |
+
+### ✅ Golden Test Validation
+
+| Feature | Description |
+|---------|-------------|
+| PoB Community Reference | Run reference calculations via PoB Community |
+| Compare Pipeline | Per-stat diff, accuracy metrics, explain mode |
+| Regression Detection | Baseline comparison after each change |
+| Stress Tests | Multi-build soak testing |
+| Auto-Explain | Deterministic analysis of discrepancies |
+
 ### 🎮 Character Analysis
 
 | Feature | Description |
@@ -52,16 +82,6 @@ The app authenticates via your existing GGG login session to provide real-time c
 | Pseudo-Mods | Calculated pseudo-modifications (DPS, life, ES, etc.) |
 | Trade Context | League-specific pricing and market context |
 | Price Estimation | Pipeline for item price evaluation |
-
-### 📊 Build Intelligence
-
-| Feature | Description |
-|---------|-------------|
-| PoB Integration | Path of Building XML import/export compatibility |
-| Skill Links | Automatic skill gem link detection and visualization |
-| Aura Reservation | Mana and life reservation calculations |
-| DPS Estimation | Combined DPS calculations across all damage sources |
-| Scaling Analysis | How build scales with gear and level changes |
 
 ### 📝 Notes & Presets
 
@@ -134,7 +154,35 @@ The app authenticates via your existing GGG login session to provide real-time c
                     └─────────────────────────┘
 ```
 
-### PoE Package Pipeline
+### PoB → Engine Pipeline
+
+```
+PoB XML (pastebin/file)
+    │
+    ▼
+┌─────────────┐
+│  PoB Parser │  pob-xml.parser.ts → base64 → gunzip → regex → PoBXmlDTO
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  Converter  │  pob-converter.ts → Build domain model
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│    Engine   │  Pure TS calculators, zero I/O
+│             │  Defense · Offense · Modifier Aggregation
+└──────┬──────┘
+       │
+       ▼
+┌──────────────────────┐
+│  Golden Tests         │  Compare against PoB Community reference
+│  Compare → Explain    │  Per-stat diff, accuracy metrics
+└──────────────────────┘
+```
+
+### Package Dependency Flow
 
 ```
 ┌─────────────┐      ┌─────────────┐      ┌─────────────┐      ┌─────────────┐
@@ -148,6 +196,25 @@ The app authenticates via your existing GGG login session to provide real-time c
    No HTTP            No HTTP               HTTP only           Drizzle
    No DB              No DB                 No DB               node-postgres
 ```
+
+---
+
+## Performance
+
+| Operation | Throughput |
+|-----------|------------|
+| PoB Import | 38k ops/sec |
+| Full Calculation | 4.9k ops/sec |
+
+## Test Suite
+
+| Suite | Count |
+|-------|-------|
+| Engine Tests | 195 |
+| Data Tests | 323 |
+| Shared Tests | 21 |
+| Golden Test Builds | 15 |
+| **Total** | **539+** |
 
 ---
 
@@ -276,7 +343,25 @@ helperdesktop/
 │   └── poe-backend/         DB schema, repos, PoE services
 │
 ├── config/                  PM2 ecosystem, tsconfig.base
-├── scripts/                 Deploy, backup, production checks
+├── scripts/
+│   ├── deploy.sh            VPS deploy
+│   ├── backup.sh            Database backup
+│   ├── push-notify.mjs      AI push notifications
+│   ├── validation/          Golden tests, comparisons
+│   ├── tooling/             Fetch, extract, analysis tools
+│   ├── development/         Debug scripts, ad-hoc tooling
+│   ├── benchmark/           Stress tests, soak tests
+│   └── migration/           Migration helpers
+├── testing/
+│   ├── golden/
+│   │   ├── builds/          PoB XML build fixtures (15)
+│   │   ├── engine/          Engine result artifacts
+│   │   ├── pob/             PoB reference results
+│   │   ├── reports/         Golden test baselines
+│   │   ├── explain/         Auto-generated diff explainers
+│   │   └── baselines/       Baseline reference data
+│   ├── fixtures/            Test helper data
+│   └── temp/                Temporary debug artifacts
 └── docs/
     ├── architecture/        System design, PoE auth architecture
     ├── development/         Development guide, code standards
@@ -284,6 +369,7 @@ helperdesktop/
     ├── database/            PostgreSQL schema, migrations
     ├── security/            JWT, session encryption
     ├── poe/                 PoE-specific documentation
+    ├── validation/          Mechanics coverage, golden test history
     └── ai/                  AI context, codebase map, task guidelines
 ```
 
@@ -338,8 +424,11 @@ HELPER_USE_NEW_AUTH=1              # 1 = unified auth, 0 = legacy
 | [Security](docs/security/SECURITY.md) | JWT, session encryption, safeStorage |
 | [Deployment](docs/deployment/DEPLOYMENT.md) | VPS setup, PM2, backups, migration |
 | [Database](docs/database/DATABASE.md) | Schema, migrations, queries |
-| [PoE Engine](docs/poe/phase1-core-engine.md) | PoE calculators, pure TypeScript |
-| [PoE Data](docs/poe/phase2-data-layer.md) | HTTP fetchers, parsers, AI |
+| [PoE Engine](docs/poe/phase1-core-engine.md) | PoE calculators, pure TypeScript (legacy doc) |
+| [PoE Data](docs/poe/phase2-data-layer.md) | HTTP fetchers, parsers, AI (legacy doc) |
+| [Validation Plan](docs/validation/PRE_RELEASE_VALIDATION_PLAN.md) | Golden tests, mechanics coverage |
+| [Validation History](docs/validation/history/) | Iterative progress records |
+| [Health Report](docs/development/REPOSITORY_HEALTH.md) | Repository health checkpoint |
 | [AI Context](docs/ai/AI_CONTEXT.md) | For AI agents: architecture map, workflows |
 | [Codebase Map](docs/ai/CODEBASE_MAP.md) | File-level codebase navigation |
 | [Task Guidelines](docs/ai/TASK_GUIDELINES.md) | Common development workflows |

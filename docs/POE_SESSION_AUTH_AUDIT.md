@@ -1,3 +1,6 @@
+> **Deprecation Notice**: This document has been superseded by [PoE Auth Architecture](../docs/architecture/POE_AUTH_ARCHITECTURE.md). 
+> The authoritative auth documentation is now in that file. This document is kept for historical reference.
+
 # PoE Session Auth — Production Audit
 
 ## Architecture

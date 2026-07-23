@@ -1,7 +1,9 @@
 # Phase 1 — Core Engine
 
-**Status**: COMPLETE  
-**Package**: `@helper/client` → `src/main/poe/core/`  
+> **Note**: Code has been migrated from `@helper/client` to `@helper/poe-engine` and `@helper/poe-data` packages. This document describes the original architecture. See individual packages for current implementation.
+
+**Status**: COMPLETE (migrated to `@helper/poe-engine` + `@helper/poe-data`)  
+**Package**: `@helper/poe-engine` (engine, calculators, rules) + `@helper/poe-data` (DTOs, parsers, adapters)  
 **Commit**: `cb3511c` (implement), `5971bf0` (audit fixes)
 
 ---
@@ -35,19 +37,17 @@ AnalysisResult  { facts, insights, scores, metadata }
 
 ## Module map
 
-| Directory | File | Purpose |
-|-----------|------|---------|
-| `dto/` | `pob-xml.dto.ts` | PoB XML structure types (DTO layer) |
-| `parsers/` | `pob-xml.parser.ts` | base64 → gunzip → regex → PoBXmlDTO |
-| `adapters/` | `pob.adapter.ts` | URL fetch + parse → `AdapterResult<PoBXmlDTO>` |
-| `factory/` | `build-factory.ts` | PoBXmlDTO → `Build` domain model |
-| `models/` | `index.ts` | Re-exports all domain types from `@helper/shared` |
-| `resolvers/` | `stat-resolver.ts` | Mod text regex → `ComputedItemStats` |
-| `calculators/` | `damage.calculator.ts` | `estimateOffense()` — estimated DPS, penetration, crit |
-| | `defense.calculator.ts` | `calculateDefense()` — EHP, resistances, recovery |
-| `rules/` | `damage.rules.ts` | Threshold checks → `Problem[]`, `Warning[]`, `UpgradeRecommendation[]` |
-| `engine/` | `analyzer.engine.ts` | Orchestrates full pipeline → `AnalysisResult` |
-| `explanation/` | `problem.explainer.ts` | Deterministic text explanations + upgrade suggestions |
+| Directory (old) | File (old) | Current package | Current path |
+|-----------------|------------|-----------------|--------------|
+| `dto/` | `pob-xml.dto.ts` | `@helper/poe-data` | `packages/poe-data/src/pob/pob-xml.dto.ts` |
+| `parsers/` | `pob-xml.parser.ts` | `@helper/poe-data` | `packages/poe-data/src/pob/pob-xml.parser.ts` |
+| `adapters/` | `pob.adapter.ts` | `@helper/poe-data` | `packages/poe-data/src/pob/pob.adapter.ts` |
+| `factory/` | `pob-converter.ts` | `@helper/poe-data` | `packages/poe-data/src/pob/pob-converter.ts` |
+| `resolvers/` | `stat-resolver.ts` | `@helper/poe-engine` + `@helper/poe-data` | `packages/poe-data/src/pob/stat-string-parser.ts` + `packages/poe-engine/src/modifiers/` |
+| `calculators/` | `damage.calculator.ts` + `defense.calculator.ts` | `@helper/poe-engine` | `packages/poe-engine/src/calculator/` |
+| `rules/` | `damage.rules.ts` | `@helper/poe-engine` | `packages/poe-engine/src/` |
+| `engine/` | `analyzer.engine.ts` | `@helper/poe-engine` | `packages/poe-engine/src/` |
+| `explanation/` | `problem.explainer.ts` | `@helper/poe-engine` | `packages/poe-engine/src/explanation/` |
 
 ---
 
@@ -122,16 +122,16 @@ AnalysisResult {
 
 ## Extension points
 
-| Extension | File | How to extend |
-|-----------|------|---------------|
-| New mod pattern | `resolvers/stat-resolver.ts` | Add entry to `MOD_PATTERNS` array (regex + category) |
-| New rule check | `rules/damage.rules.ts` | Add to `evaluateDamageReport` / `evaluateDefenseReport` |
-| New upgrade trigger | `rules/damage.rules.ts` | Add to `detectUpgrades` function |
-| New score dimension | `engine/analyzer.engine.ts` | Add to `computeScores`, return in `BuildScores` |
-| New explanation template | `explanation/problem.explainer.ts` | Add to `templates` record |
-| New PoB section | `parsers/pob-xml.parser.ts` | Add `parseXxxSection()` using regex extraction |
-| New adapter | `adapters/` | Implement `AdapterResult<T>` pattern, no business logic |
-| New calculator | `calculators/` | Pure TS, no DB/Electron deps |
+| Extension | File (old) | Current location | How to extend |
+|-----------|------------|-----------------|---------------|
+| New mod pattern | `stat-resolver.ts` | `packages/poe-data/src/pob/stat-string-parser.ts` | Add entry to `MOD_PATTERNS` array (regex + category) |
+| New rule check | `damage.rules.ts` | `packages/poe-engine/src/` | Add to `evaluateDamageReport` / `evaluateDefenseReport` |
+| New upgrade trigger | `damage.rules.ts` | `packages/poe-engine/src/` | Add to `detectUpgrades` function |
+| New score dimension | `analyzer.engine.ts` | `packages/poe-engine/src/` | Add to `computeScores`, return in `BuildScores` |
+| New explanation template | `problem.explainer.ts` | `packages/poe-engine/src/explanation/` | Add to `templates` record |
+| New PoB section | `pob-xml.parser.ts` | `packages/poe-data/src/pob/pob-xml.parser.ts` | Add `parseXxxSection()` using regex extraction |
+| New adapter | `adapters/` | `packages/poe-data/src/pob/` | Implement `AdapterResult<T>` pattern, no business logic |
+| New calculator | `calculators/` | `packages/poe-engine/src/calculator/` | Pure TS, no DB/Electron deps |
 
 ---
 

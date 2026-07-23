@@ -1,7 +1,9 @@
 # Phase 2 — Data Intelligence Layer
 
-**Status**: COMPLETE  
-**Package**: `@helper/client` → `src/main/poe/data/`  
+> **Note**: Code migrated to `@helper/poe-data` and `@helper/poe-engine` packages. This document describes the original architecture.
+
+**Status**: MIGRATED to `@helper/poe-data` / `@helper/poe-engine`  
+**Original location**: `apps/client/src/main/poe/data/`  
 **Tests**: 23 new (43 total with Phase 1)
 
 ---
@@ -9,9 +11,9 @@
 ## Architecture
 
 ```
-apps/client/src/main/poe/
-├── core/          ← Phase 1: pure domain (no IO)
-└── data/          ← Phase 2: data sources, normalizers, loaders, sync
+packages/poe-engine/src/   ← Phase 1: pure domain (no IO)
+packages/poe-data/src/     ← Phase 2: data sources, normalizers, loaders, sync
+└── (files below are under poe-data/src/)
     ├── contracts/
     │   └── data-source.ts      DataSource<T> interface
     ├── sources/
@@ -124,7 +126,7 @@ startSyncScheduler({ league, onSyncComplete?, onSyncError? }) → stopFn
 
 | Rule | Status |
 |------|--------|
-| Core has no IO | ✅ Data layer is separate from `core/` |
+| Core has no IO | ✅ Data layer is separate from `poe-engine` |
 | Sources are thin wrappers | ✅ Only fetch + return `AdapterResult<T>` |
 | Normalizers are pure functions | ✅ No IO, no side effects |
 | No new DB dependencies | ✅ Loaders prepare data for server API |
