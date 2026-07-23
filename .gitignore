@@ -101,3 +101,25 @@ ai-push.json
 # PM2
 pm2.pid
 .dump
+
+# Scratch / accidental files
+p.end())'
+{
+моя заметка.txt
+
+# Testing output
+testing/golden/engine/
+testing/golden/pob/
+testing/golden/reports/
+testing/golden/explain/
+testing/logs/
+testing/temp/
+
+# Generated debug files
+scripts/development/*.js
+scripts/development/*.mjs
+
+# Temp/generated artifacts in testing
+testing/benchmarks/
+testing/stress/
+testing/temp/
